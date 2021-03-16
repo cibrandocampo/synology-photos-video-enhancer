@@ -11,7 +11,3 @@ PIPE=`python -c 'import sys;print(sys.argv[1].replace(" -r 15","").replace(" -pr
 echo $@ >> /var/log/transcoding-optimizator.log
 
 
-cd /var/packages/CodecPack/target/bin 
-sudo mv ffmpeg41 ffmpeg42
-
-sudo ln -s /path/to/ffmpeg41.sh ffmpeg41
