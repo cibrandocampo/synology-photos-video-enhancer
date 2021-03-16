@@ -9,3 +9,14 @@ This small plugin is developed to optimize it and be able to configure it.
 ## License
 
 GNU GENERAL PUBLIC LICENSE
+
+
+## Install
+
+
+```sh
+cd /var/packages/CodecPack/target/bin 
+sudo mv ffmpeg41 ffmpeg42
+
+sudo ln -s /path/to/ffmpeg41.sh ffmpeg41
+```
