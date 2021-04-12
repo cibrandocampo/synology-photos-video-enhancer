@@ -13,10 +13,13 @@ GNU GENERAL PUBLIC LICENSE
 
 ## Install
 
+Download and Unzip Ffmpeg from: https://johnvansickle.com/ffmpeg/
 
 ```sh
 cd /var/packages/CodecPack/target/bin 
 sudo mv ffmpeg41 ffmpeg42
 
 sudo ln -s /path/to/ffmpeg41.sh ffmpeg41
+sudo ln -s /path/to/ffmpeg ffmpeg45
+sudo ln -s /path/to/h265-transcoder-optimizator.py h265-transcoder-optimizator.py
 ```
