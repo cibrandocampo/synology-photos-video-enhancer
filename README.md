@@ -1,10 +1,10 @@
-# Synology transcoder optimizator for DSM 7.0
+# Video quality enhancer for Synology Photo 1.0.0-0182
 
-## Small optimizations to improve the transcoding quality 
+Unfortunately, the quality of the transcoding process for medium quality videos (for mobile devices) is poor.
+- Videos uploaded from the smartphone: H.264 baseline profile.
+- Videos uploaded on the web / samba: Framerate of 15fps.
 
-For this version, my NAS (DS720+) just transcode for medium quality in H.264 720p@15fps, and which makes the video look bumpy.
-
-This small plugin is developed to optimize it and be able to configure the video transcodification.
+This tool aims to increase the quality of these videos without increasing the size or bitrate. To do this, a new transcoding is executed from the original file and the HEVC codec is used. Currently 90% of smartphones, laptops and tablets already support this codec.
 
 ## License
 
@@ -13,15 +13,15 @@ GNU GENERAL PUBLIC LICENSE
 
 ## Install
 
-1- Download and Unzip FFmpeg from: https://johnvansickle.com/ffmpeg/
-2- Copy the binary FFmpeg file in your favourite path (in my case /volumes1/code/)
-3- Execute the following commands. 
+1- Create a directory to host the code and last FFmpeg version. (for example /code/)
+2- Download and Unzip FFmpeg from: https://johnvansickle.com/ffmpeg/
+4- Copy the FFmpeg and FFrpobe binary to the /bin code folder (or any directory deemed suitable)
+5- Copy the code from /photo-enhancer folder to the /code directory
+6- Manually execute the command, or schedule it in the DSM task manager.
 
 ```sh
-cd /var/packages/CodecPack/target/bin 
-sudo mv ffmpeg41 ffmpeg41_original
 
-sudo ln -s /path/to/ffmpeg41.sh ffmpeg41
-sudo ln -s /path/to/ffmpeg ffmpeg45
-sudo ln -s /path/to/h265-transcoder-optimizator.py h265-transcoder-optimizator.py
+mkdir /volume1/code/synology-transcoding/photo-enhancer/
+mkdir /volume1/code/synology-transcoding/bin/
+
 ```
