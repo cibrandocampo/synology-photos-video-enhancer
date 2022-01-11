@@ -1,4 +1,4 @@
-# Video quality enhancer for Synology Photo 1.0.0-0182
+# Video quality enhancer for Synology Photo 1.1.0-0224
 
 Unfortunately, the quality of the transcoding process for medium quality videos (for mobile devices) is poor.
 - Videos uploaded from the smartphone: H.264 baseline profile.
@@ -13,11 +13,11 @@ GNU GENERAL PUBLIC LICENSE
 
 ## Install
 
-1- Create a directory to host the code and last FFmpeg version. (for example /code/)
-2- Download and Unzip FFmpeg from: https://johnvansickle.com/ffmpeg/
-4- Copy the FFmpeg and FFrpobe binary to the /bin code folder (or any directory deemed suitable)
-5- Copy the code from /photo-enhancer folder to the /code directory
-6- Manually execute the command, or schedule it in the DSM task manager.
+- Create a directory to host the code and last FFmpeg version. (for example /code/)
+- Download and Unzip FFmpeg from: https://johnvansickle.com/ffmpeg/
+- Copy the FFmpeg and FFprobe binary to the /bin code folder (or any directory)
+- Copy the code from /photo-enhancer folder to the /code directory
+- Manually execute the command, or schedule it in the DSM task manager.
 
 ```sh
 
