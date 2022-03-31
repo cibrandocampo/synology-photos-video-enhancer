@@ -131,6 +131,7 @@ def video_transcode(video_path, small_video_path, filename, small_video_info):
 
     pipe += '-c:a ' + conf.get('OutputVideo', 'AUDIO_CODEC') + ' '
     pipe += '-b:a ' + conf.get('OutputVideo', 'AUDIO_BITRATE') + ' '
+    pipe += '-ac ' + conf.get('OutputVideo', 'AUDIO_CHANNELS') + ' '
 
     pipe_2_pass_2 = pipe + ' -pass 2 -passlogfile "' + log_filename_path + '" '
     pipe_2_pass_2 += conf.get('FFmpeg', 'CONTAINER_FLAGS') + ' "' + small_video_path + '"'
