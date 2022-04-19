@@ -1,4 +1,4 @@
-# Video quality enhancer for DSMI 7.1 and Synology Photo 1.2.0-0263
+# Video quality enhancer for DSM v7.1 and Synology Photo 1.2.0-0263
 
 Unfortunately, the quality of the transcoding process for medium quality videos (for mobile devices) is poor.
 - Videos uploaded from the smartphone: H.264 baseline profile.
