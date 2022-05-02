@@ -79,34 +79,41 @@ def get_video_info(video_path):
     return video_info
 
 
-def transcode_video_if_needed(video_path, small_video_path, filename):
-    logging.info("checkVideoNeedsTranscode: " + str(video_path))
-    small_video_info = get_video_info(small_video_path)
+def add_quality_control_file(video_quality_path):
+    open(video_quality_path, 'a').close()
 
-    if not 'codec_name' in small_video_info or small_video_info['codec_name'] != 'hevc':
-        logging.info("transcodeVideoIfNeeded. Transcodification needed for: " + str(video_path))
-        if video_transcode(video_path, small_video_path, filename, small_video_info):
-            logging.info("transcodeVideoIfNeeded. Transcodification finished for: " + str(video_path))
+
+def check_if_videos_needs_transcoding(base_video_path, videos_filename):
+    logging.info('check_if_videos_needs_transcoding')
+    videos_that_need_transcoding = []
+    for video_filename in videos_filename:
+        video_file_path = f'{base_video_path}{video_filename}'
+        logging.debug('check_if_videos_needs_transcoding. Analyzing: {video_file_path}')
+        if os.path.exists(video_file_path) and not os.path.isfile(f'{video_file_path}_completed'):
+            video_info = get_video_info(video_file_path)
+            if not 'codec_name' in video_info or video_info['codec_name'] != 'hevc':
+                videos_that_need_transcoding.append(video_file_path)
+            else:
+                logging.debug('check_if_videos_needs_transcoding. Video: {video_file_path} is already transcoded')
+                add_quality_control_file(f'{video_file_path}_completed')
         else:
-            logging.warning("transcodeVideoIfNeeded. Transcodification failed for: " + str(video_path))
+            logging.debug('check_if_videos_needs_transcoding. Video: {video_file_path} do not exists')
+
+    return videos_that_need_transcoding
 
 
-def video_transcode(video_path, small_video_path, filename, small_video_info):
-    logging.info("video_transcode: " + str(video_path))
+def transcode_video(original_video_path, optimized_video_path):
+    logging.info(f'video_transcode. From {original_video_path} to {optimized_video_path}')
 
-    pipe = initialize_ffmpeg_command() + ' -loglevel quiet -y -i "' + video_path + '" '
+    pipe = initialize_ffmpeg_command() + ' -loglevel quiet -y -i "' + original_video_path + '" '
 
-    if small_video_info['width']:
-        video_width = small_video_info['width']
-        video_height = small_video_info['height']
+    original_video_info = get_video_info(original_video_path)
+    if original_video_info['width']:
+        video_width = original_video_info['width']
+        video_height = original_video_info['height']
     else:
-        original_video_info = get_video_info(video_path)
-        if original_video_info['width']:
-            video_width = original_video_info['width']
-            video_height = original_video_info['height']
-        else:
-            logging.warning("video_transcode. Invalid resolution")
-            video_width = video_height = 0
+        logging.warning("video_transcode. Invalid resolution")
+        video_width = video_height = 0
 
     if video_width >= video_height:
         pipe += "-vf 'format=nv12,hwupload,scale_vaapi=w=-2:h=" + conf.get('OutputVideo', 'VIDEO_MAX_H_W') + "' "
@@ -123,7 +130,7 @@ def video_transcode(video_path, small_video_path, filename, small_video_info):
     pipe += '-maxrate ' + conf.get('OutputVideo', 'VIDEO_BITRATE') + ' '
     pipe += '-threads ' + conf.get('FFmpeg', 'EXECUTION_THREADS') + ' '
 
-    working_dir = conf.get('Docker', 'VOLUME_WORKSPACE') + filename
+    working_dir = conf.get('Docker', 'VOLUME_WORKSPACE') + 'ffmpeg_workspace'
     os.makedirs(working_dir, exist_ok=True)
     log_filename_path = working_dir + '/ffmpeg'
 
@@ -134,28 +141,32 @@ def video_transcode(video_path, small_video_path, filename, small_video_info):
     pipe += '-ac ' + conf.get('OutputVideo', 'AUDIO_CHANNELS') + ' '
 
     pipe_2_pass_2 = pipe + ' -pass 2 -passlogfile "' + log_filename_path + '" '
-    pipe_2_pass_2 += conf.get('FFmpeg', 'CONTAINER_FLAGS') + ' "' + small_video_path + '"'
+    pipe_2_pass_2 += conf.get('FFmpeg', 'CONTAINER_FLAGS') + ' "' + optimized_video_path + '"'
 
-    logging.info("video_transcode. Starting transcoding (1/2) for: " + str(filename))
-    logging.debug("video_transcode. " + str(pipe_2_pass_1))
+    logging.info(f'video_transcode. Starting transcoding (1/2) for: {original_video_path} to {optimized_video_path}')
     os.system(pipe_2_pass_1)
-    logging.info("video_transcode. Finished transcoding (1/2) for: " + str(filename))
+    logging.info(f'video_transcode. Finished transcoding (1/2) for: {original_video_path} to {optimized_video_path}')
+
     time.sleep(5)
-    logging.info("video_transcode. Starting transcoding (2/2) for: " + str(filename))
-    logging.debug("video_transcode. " + str(pipe_2_pass_2))
+
+    logging.info(f'video_transcode. Starting transcoding (2/2) for: {original_video_path} to {optimized_video_path}')
     if int(os.system(pipe_2_pass_2)):
-        logging.warning("video_transcode. Transcoding proccess failed for: " + str(filename))
-        logging.info("video_transcode. Trying transcodification in a single pass for: " + str(filename))
-        pipe_one_pass = pipe + ' -crf 16 "' + small_video_path + '"'
-        logging.debug("video_transcode. " + str(pipe_one_pass))
+        logging.warning(f'video_transcode. Transcoding proccess for: {original_video_path} to {optimized_video_path}')
+
+        logging.info(f'video_transcode. Starting Single-pass for: {original_video_path} to {optimized_video_path}')
+        pipe_one_pass = pipe + ' -crf 16 "' + optimized_video_path + '"'
+
         if os.system(pipe_one_pass):
-            logging.error("video_transcode. Single-pass transcoding failed for: " + str(filename))
+            logging.warning(f'video_transcode. Failed Single-pass for: {original_video_path} to {optimized_video_path}')
             clean_path(working_dir)
             return False
-        logging.info("video_transcode. Finished Single-pass transcoding for: " + str(filename))
+
+        logging.info(f'video_transcode. Finished Single-pass for: {original_video_path} to {optimized_video_path}')
         clean_path(working_dir)
+        add_quality_control_file(f'{optimized_video_path}_completed')
         return True
 
-    logging.info("video_transcode. Finished transcoding (2/2) for: " + str(filename))
+    logging.info(f'video_transcode. Finished transcoding (2/2) for: {original_video_path} to {optimized_video_path}')
     clean_path(working_dir)
+    add_quality_control_file(f'{optimized_video_path}_completed')
     return True
