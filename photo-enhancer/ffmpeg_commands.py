@@ -11,7 +11,7 @@ conf.read('video_quality_enhancer.conf')
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.ERROR,
+    level=logging.WARNING,
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
@@ -90,13 +90,8 @@ def check_if_videos_needs_transcoding(base_video_path, videos_filename):
 
         logging.debug(f'check_if_videos_needs_transcoding. Analyzing: {video_file_path}')
         if os.path.exists(video_file_path) and not os.path.isfile(f'{video_file_path}_completed'):
-            video_info = get_video_info(video_file_path)
-            if not 'codec_name' in video_info or video_info['codec_name'] != 'hevc':
-                logging.info(f'check_if_videos_needs_transcoding. {video_file_path} needs to be transcoded')
-                videos_that_need_transcoding.append(video_file_path)
-            else:
-                logging.info(f'check_if_videos_needs_transcoding. {video_file_path} is already transcoded')
-                add_quality_control_file(f'{video_file_path}_completed')
+            logging.info(f'check_if_videos_needs_transcoding. {video_file_path} needs to be transcoded')
+            videos_that_need_transcoding.append(video_file_path)
         else:
             logging.debug(f'check_if_videos_needs_transcoding. Video: {video_file_path} do not exists')
 
