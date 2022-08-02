@@ -4,14 +4,14 @@ import time
 import logging
 import configparser
 
-from utils import clean_path
+from utils import clean_path, create_transcode_signal
 
 conf = configparser.ConfigParser()
 conf.read('video_quality_enhancer.conf')
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.WARNING,
+    level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
@@ -37,7 +37,7 @@ def initialize_ffmpeg_command():
 
 
 def get_json_video_info(video_path):
-    logging.info("get_json_video_info: " + str(video_path))
+    logging.debug("get_json_video_info: " + str(video_path))
     ffprobe_pipe = initialize_ffprobe_command() + ' -loglevel quiet "' + video_path + '"'
     ffprobe_pipe += ' -show_entries stream=width,height,r_frame_rate,profile,codec_name'
     ffprobe_pipe += ' -print_format json'
@@ -47,7 +47,7 @@ def get_json_video_info(video_path):
 
 
 def get_dict_video_info(json_video_info, video_path='original'):
-    logging.info("get_dict_video_info: " + str(json_video_info))
+    logging.debug("get_dict_video_info: " + str(json_video_info))
     video_info = {}
 
     for stream in json_video_info['streams']:
@@ -65,7 +65,7 @@ def get_dict_video_info(json_video_info, video_path='original'):
 
 
 def get_video_info(video_path):
-    logging.info("get_video_info: " + str(video_path))
+    logging.debug("get_video_info: " + str(video_path))
 
     json_video_info = get_json_video_info(video_path)
     if 'streams' in str(json_video_info) and len(json_video_info['streams']):
@@ -79,17 +79,14 @@ def get_video_info(video_path):
     return video_info
 
 
-def add_quality_control_file(video_quality_path):
-    open(video_quality_path, 'a').close()
-
-
 def check_if_videos_needs_transcoding(base_video_path, videos_filename):
     videos_that_need_transcoding = []
     for video_filename in videos_filename:
         video_file_path = f'{base_video_path}{video_filename}'
+        video_file_signal = f'{video_file_path}_completed_{conf.get("OutputVideo", "VIDEO_CODEC")}'
 
         logging.debug(f'check_if_videos_needs_transcoding. Analyzing: {video_file_path}')
-        if os.path.exists(video_file_path) and not os.path.isfile(f'{video_file_path}_completed'):
+        if os.path.exists(video_file_path) and not os.path.isfile(video_file_signal):
             logging.info(f'check_if_videos_needs_transcoding. {video_file_path} needs to be transcoded')
             videos_that_need_transcoding.append(video_file_path)
         else:
@@ -99,7 +96,7 @@ def check_if_videos_needs_transcoding(base_video_path, videos_filename):
 
 
 def transcode_video(original_video_path, optimized_video_path):
-    logging.info(f'video_transcode. From {original_video_path} to {optimized_video_path}')
+    logging.debug(f'video_transcode. From {original_video_path} to {optimized_video_path}')
 
     pipe = initialize_ffmpeg_command() + ' -loglevel quiet -y -i "' + original_video_path + '" '
 
@@ -159,10 +156,10 @@ def transcode_video(original_video_path, optimized_video_path):
 
         logging.info(f'video_transcode. Finished Single-pass for: {original_video_path} to {optimized_video_path}')
         clean_path(working_dir)
-        add_quality_control_file(f'{optimized_video_path}_completed')
+        create_transcode_signal(optimized_video_path)
         return True
 
     logging.info(f'video_transcode. Finished transcoding (2/2) for: {original_video_path} to {optimized_video_path}')
     clean_path(working_dir)
-    add_quality_control_file(f'{optimized_video_path}_completed')
+    create_transcode_signal(optimized_video_path)
     return True
