@@ -4,21 +4,20 @@ Unfortunately, the quality of the transcoding process for medium quality videos 
 - Videos uploaded from the smartphone: H.264 baseline profile.
 - Videos uploaded on the web / samba: Framerate of 15fps.
 
-This tool aims to increase the quality of these videos without increasing the size or bitrate. To do this, a new transcoding is executed from the original file and the HEVC codec is used. Currently 90% of smartphones, laptops and tablets already support this codec.
+This tool aims to increase the quality lanching a optimized transcoding process base in the original video. The output can be H.264 HighProfile (best compression/quality rate) or the new H.265/HEVC codec.
+
+## Install
+
+- Confirm docker package is installed on DSM. (https://www.synology.com/en-global/dsm/packages/Docker)
+- Create a directory to host the code (Example: /volume1/code/synology-transcoding/)
+- Copy the code from /photo-enhancer folder to the previous folder (Example: /volume1/code/synology-transcoding/)
+- Manually execute the command, or schedule it in the DSM task manager. (https://kb.synology.com/en-uk/DSM/help/DSM/AdminCenter/system_taskscheduler?version=7)
+
+
+## Help
+
+Send me an email (hello@cibran.es) if you need extra help.
 
 ## License
 
 GNU GENERAL PUBLIC LICENSE
-
-
-## Install
-
-- Create a directory to host the code and last FFmpeg version. (for example /code/)
-- Copy the code from /photo-enhancer folder to the /code directory
-- Manually execute the command, or schedule it in the DSM task manager.
-
-```sh
-
-mkdir /volume1/code/synology-transcoding/photo-enhancer/
-
-```
