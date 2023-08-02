@@ -1,0 +1,149 @@
+"""Main entry point - composition root."""
+import sys
+import signal
+import time
+import schedule
+
+from infrastructure.config.config import Config
+from infrastructure.logger import Logger
+from infrastructure.db.connection import DatabaseConnection
+from infrastructure.db.video_repository_sql import VideoRepositorySQL
+from infrastructure.filesystem.local_filesystem import LocalFilesystem
+from infrastructure.hardware.local_hardware_info import LocalHardwareInfo
+from application.process_videos_use_case import ProcessVideosUseCase
+from controllers.main_controller import MainController
+from domain.constants.container import get_video_extensions
+
+
+# Global flag for graceful shutdown
+_shutdown_requested = False
+
+
+def _signal_handler(signum, frame):
+    """Handles shutdown signals gracefully."""
+    global _shutdown_requested
+    logger = Logger.get_logger()
+    logger.info(f"Received signal {signum}, shutting down gracefully...")
+    _shutdown_requested = True
+
+
+def _run_processing(controller, logger):
+    """
+    Executes the video processing workflow.
+    
+    Args:
+        controller: MainController instance (pre-configured)
+        logger: Logger instance
+    """
+    try:
+        # Parse CLI arguments
+        args = MainController.parse_args()
+        
+        # Execute
+        logger.subtitle("Starting video processing...")
+        result = controller.run(args)
+        logger.subtitle("Video processing completed")
+        
+        # Check if execution was successful
+        if result.is_success:
+            logger.info("Process completed successfully")
+        else:
+            logger.warning(f"Process completed with {result.errors} error(s)")
+        
+    except Exception as e:
+        logger.error(f"Error during video processing: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
+def main():
+    """Main application entry point - composition root."""
+    global _shutdown_requested
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
+    
+    logger = Logger.get_logger()
+    logger.title("Starting Synology Photos Video Enhancer")
+    
+    try:
+        # 1. Load configuration
+        config = Config.load()
+        config.log_config()
+        
+        # 2. Initialize infrastructure adapters (once, reused across all executions)
+        logger.info("Initializing infrastructure adapters...")
+        
+        # Database connection
+        db_connection = DatabaseConnection(config.database)
+        db_connection.initialize()
+        
+        # Repository
+        video_repository = VideoRepositorySQL(db_connection)
+        
+        # Filesystem
+        filesystem = LocalFilesystem(get_video_extensions())
+        
+        # Hardware info (logs internally, cached after first detection)
+        hardware_info = LocalHardwareInfo()
+        
+        # 3. Build use case (reused across all executions)
+        use_case = ProcessVideosUseCase(
+            video_repository=video_repository,
+            filesystem=filesystem,
+            hardware_info=hardware_info,
+            video_config=config.transcoding.video,
+            audio_config=config.transcoding.audio,
+            video_input_path=config.paths.media_path,
+            execution_threads=config.transcoding.execution_threads
+        )
+        
+        # 4. Build controller (reused across all executions)
+        controller = MainController(use_case, logger=logger)
+        
+        logger.info("Infrastructure adapters initialized successfully")
+        
+        startup_delay = config.transcoding.startup_delay
+        execution_interval = config.transcoding.execution_interval
+        
+        logger.info(f"Waiting {startup_delay} minutes before first execution...")
+        logger.info(f"After first execution, will run every {execution_interval} minutes")
+        
+        # Wait for startup delay
+        startup_delay_seconds = startup_delay * 60
+        elapsed = 0
+        while elapsed < startup_delay_seconds and not _shutdown_requested:
+            time.sleep(1)
+            elapsed += 1
+        
+        if _shutdown_requested:
+            logger.info("Shutdown requested during startup delay")
+            return
+        
+        # Schedule periodic execution
+        schedule.every(execution_interval).minutes.do(_run_processing, controller=controller, logger=logger)
+        
+        # Run first execution immediately after startup delay
+        logger.subtitle("Executing first video processing run...")
+        _run_processing(controller, logger)
+        
+        # Main loop: run scheduled tasks
+        logger.subtitle("Entering scheduled execution loop...")
+        while not _shutdown_requested:
+            schedule.run_pending()
+            time.sleep(1)
+        
+        logger.info("Shutdown complete")
+        
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user")
+    except Exception as e:
+        logger.error(f"Application error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

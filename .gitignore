@@ -130,3 +130,14 @@ dmypy.json
 
 #SFTP-configuration
 sftp-config.json
+
+# Development media files
+dev/media/
+
+# Database files
+data/
+*.db
+transcodings.db
+
+# IDE
+.vscode/

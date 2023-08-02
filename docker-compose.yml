@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  video-enhancer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: synology-photos-video-enhancer
+    env_file:
+      - .env
+    volumes:
+      # Note: rw (read-write) is required to write transcoded videos to @eaDir directories
+      - ${MEDIA_HOST_PATH}:${MEDIA_APP_PATH:-/media}:rw
+      - ${DATABASE_HOST_PATH:-./data}:/app/data
+    # Hardware acceleration (VAAPI/QSV for amd64, V4L2M2M for ARM)
+    # Optional: if unavailable, software encoding will be used
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped
