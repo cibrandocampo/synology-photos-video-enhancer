@@ -1,0 +1,5 @@
+pydantic>=2.0.0
+sqlalchemy>=2.0.0
+py-cpuinfo>=9.0.0
+schedule>=1.2.0
+
