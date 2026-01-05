@@ -1,0 +1,139 @@
+name: Update Python and Build Docker
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cibrandocampo/synology-photos-video-enhancer
+          tags: |
+            type=raw,value=latest
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PY_IMAGE=python:3.13-slim-bookworm
+      
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: cibrandocampo/synology-photos-video-enhancer
+          readme-filepath: ./README.md
+      
+      - name: Notify success
+        run: |
+          echo "Docker image updated with latest Python version (from main)"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+
+  build-stable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "No tags found, skipping stable build"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Found latest tag: $TAG"
+          fi
+      
+      - name: Checkout latest tag
+        if: steps.get_tag.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_tag.outputs.tag }}
+      
+      - name: Set up Docker Buildx
+        if: steps.get_tag.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        if: steps.get_tag.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        if: steps.get_tag.outputs.skip != 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cibrandocampo/synology-photos-video-enhancer
+          tags: |
+            type=raw,value=stable
+            type=raw,value=${{ steps.get_tag.outputs.tag }}
+      
+      - name: Build and push Docker image
+        if: steps.get_tag.outputs.skip != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PY_IMAGE=python:3.13-slim-bookworm
+      
+      - name: Update Docker Hub description
+        if: steps.get_tag.outputs.skip != 'true'
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: cibrandocampo/synology-photos-video-enhancer
+          readme-filepath: ./README.md
+      
+      - name: Notify success
+        if: steps.get_tag.outputs.skip != 'true'
+        run: |
+          echo "Docker image updated with latest Python version (from tag ${{ steps.get_tag.outputs.tag }})"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+      
+      - name: Notify skip
+        if: steps.get_tag.outputs.skip == 'true'
+        run: |
+          echo "No tags found, skipping stable build"

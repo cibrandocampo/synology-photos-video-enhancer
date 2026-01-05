@@ -1,0 +1,1 @@
+"""Domain constants package."""

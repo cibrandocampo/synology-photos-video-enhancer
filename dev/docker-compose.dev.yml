@@ -1,0 +1,27 @@
+services:
+  video-enhancer:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: synology-photos-video-enhancer-dev
+    env_file:
+      - ../.env
+    volumes:
+      # Mount media directory for development
+      # MEDIA_HOST_PATH: path on host, MEDIA_APP_PATH: path inside container (default: /media)
+      # Note: rw (read-write) is required to write transcoded videos to @eaDir directories
+      - ${MEDIA_HOST_PATH:-../dev/media}:${MEDIA_APP_PATH:-/media}:rw
+      # Mount database directory to persist data
+      # DATABASE_HOST_PATH: path on host, DATABASE_APP_PATH: path inside container (default: data/transcodings.db)
+      - ${DATABASE_HOST_PATH:-../data}:/app/data
+      # Mount source code for live development (changes reflect immediately)
+      - ../src:/app
+    # Enable hardware acceleration (VAAPI/QSV) if available
+    devices:
+      - /dev/dri:/dev/dri
+    # Enable interactive mode for debugging
+    stdin_open: true
+    tty: true
+    # Override entrypoint to allow shell access
+    entrypoint: ["/bin/sh"]
+    command: ["-c", "python main.py"]

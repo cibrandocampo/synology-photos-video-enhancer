@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  video-enhancer:
+    image: cibrandocampo/synology-photos-video-enhancer:${DOCKER_VERSION:-stable}
+    container_name: synology-photos-video-enhancer
+    env_file:
+      - .env
+    volumes:
+      # ============================================
+      # THESE FIELDS MUST BE MODIFIED
+      # ============================================
+      
+      # 1. If you have a common photos folder shared by all users:
+      #    Modify the path /volume1/photo according to your Synology configuration
+      #    If you don't have a common folder, delete this line
+      - /volume1/photo:${MEDIA_APP_PATH:-/media}/photos:rw
+      
+      # 2. For each user whose photos you want to enhance:
+      #    - Replace user1, user2, etc. with actual Synology usernames
+      #    - Add or remove lines according to the number of users
+      - /volume1/homes/user1/Photos:${MEDIA_APP_PATH:-/media}/user1:rw
+      - /volume1/homes/user2/Photos:${MEDIA_APP_PATH:-/media}/user2:rw
+      #    To add more users, copy this line and replace USERNAME:
+      #    - /volume1/homes/USERNAME/Photos:${MEDIA_APP_PATH:-/media}/USERNAME:rw
+      
+      # ============================================
+      # NO NEED TO MODIFY (only configure in .env if needed)
+      # ============================================
+      
+      # Database storage
+      # Volume is mounted to /data, DATABASE_APP_PATH in .env should be the full path to the database file
+      - ${DATABASE_HOST_PATH:-./data}:${DATABASE_APP_PATH:-/data/db}
+      
+    # Hardware acceleration (VAAPI/QSV for amd64, V4L2M2M for arm64)
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped

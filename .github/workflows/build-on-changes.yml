@@ -1,0 +1,85 @@
+name: Build Docker on Code Changes
+
+on:
+  push:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Run tests in Docker
+        run: |
+          docker compose -f dev/docker-compose.test.yml build
+          docker compose -f dev/docker-compose.test.yml up --abort-on-container-exit
+      
+      - name: Check test results
+        run: |
+          # Verify tests passed by checking exit code
+          docker compose -f dev/docker-compose.test.yml run --rm video-enhancer-test \
+            sh -c "pip install -q -r dev/requirements-dev.txt && python -m pytest --cov=. --cov-report=term tests/ || exit 1"
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cibrandocampo/synology-photos-video-enhancer
+          tags: |
+            type=raw,value=latest
+            type=raw,value=stable,enable=${{ github.event_name == 'release' }}
+            type=raw,value=${{ github.event.release.tag_name }},enable=${{ github.event_name == 'release' }}
+            type=ref,event=tag
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PY_IMAGE=python:3.13-slim-bookworm
+      
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: cibrandocampo/synology-photos-video-enhancer
+          readme-filepath: ./README.md
+      
+      - name: Build summary
+        run: |
+          echo "Docker image built successfully"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
