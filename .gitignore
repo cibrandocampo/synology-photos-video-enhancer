@@ -46,6 +46,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage/
 *.cover
 *.py,cover
 .hypothesis/
@@ -130,3 +131,17 @@ dmypy.json
 
 #SFTP-configuration
 sftp-config.json
+
+# Development media files
+dev/media/
+
+# Database files
+data/
+*.db
+transcodings.db
+
+# Grafana data
+grafana-data/
+
+# IDE
+.vscode/
