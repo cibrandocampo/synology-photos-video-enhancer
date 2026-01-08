@@ -1,0 +1,46 @@
+services:
+  video-enhancer:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: synology-photos-video-enhancer-debug
+    working_dir: /app
+    env_file:
+      - ../.env
+    environment:
+      # Enable debugpy
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount media directory for development
+      # MEDIA_HOST_PATH: path on host, MEDIA_APP_PATH: path inside container (default: /media)
+      # Note: rw (read-write) is required to write transcoded videos to @eaDir directories
+      - ${MEDIA_HOST_PATH:-../dev/media}:${MEDIA_APP_PATH:-/media}:rw
+      # Mount database directory to persist data
+      # DATABASE_HOST_PATH: path on host, DATABASE_APP_PATH: path inside container (default: data/transcodings.db)
+      - ${DATABASE_HOST_PATH:-../data}:/app/data
+      # Mount source code for live development (changes reflect immediately)
+      - ../src:/app
+    # Enable hardware acceleration (VAAPI/QSV) if available
+    devices:
+      - /dev/dri:/dev/dri
+    # Expose debugpy port
+    ports:
+      - "5678:5678"
+    # Enable interactive mode for debugging
+    stdin_open: true
+    tty: true
+    # Override entrypoint to install debugpy and keep waiting for connections
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pip install debugpy || true
+        echo "Debugpy ready. Waiting for debugger connections on port 5678..."
+        echo "You can attach/re-attach the debugger at any time."
+        # Keep container running and allow reconnections
+        # Use --wait-for-client to wait for debugger, then execute
+        while true; do
+          echo "Waiting for debugger to attach..."
+          python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m main || true
+          echo "Execution finished. Ready for next connection..."
+          sleep 1
+        done
