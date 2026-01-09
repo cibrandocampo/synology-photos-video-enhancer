@@ -223,7 +223,7 @@ python main.py --only-new      # Only process new videos
 
 ## Configuration
 
-Configuration is loaded **only from environment variables**. See `.env.example` in the root directory for all available variables.
+Configuration is loaded **only from environment variables**. See `env.example` in the root directory for all available variables.
 
 ### Main Environment Variables
 
@@ -253,7 +253,7 @@ Configuration is loaded **only from environment variables**. See `.env.example` 
 - `LOGGER_NAME` - Logger name (default: synology-photos-video-enhancer)
 - `LOGGER_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
 
-For a complete list of all environment variables and their descriptions, see `.env.example` in the root directory.
+For a complete list of all environment variables and their descriptions, see `env.example` in the root directory.
 
 ## Adding New Features
 

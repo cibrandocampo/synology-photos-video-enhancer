@@ -1,4 +1,4 @@
-# Synology Photos Video Enhancer
+# Synology Photos – Intermediate Video Quality Enhancer
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/cibrandocampo/synology-photos-video-enhancer)
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-Image-blue?logo=docker)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
@@ -7,13 +7,19 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A robust and efficient tool for enhancing video quality in Synology Photos by automatically transcoding videos to optimized formats with hardware acceleration support. Optionally, you can monitor transcoding results and statistics using Grafana dashboards.
+![Grafana Dashboard](docs/images/small_grafana_dashboard.png)
 
-Unfortunately, the quality of Synology Photos' built-in transcoding process for medium quality videos (for mobile devices) is poor:
-- Videos uploaded from smartphones: H.264 baseline profile
-- Videos uploaded via web/SMB: Framerate of 15fps
+Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video’s codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
-This tool automatically detects and transcodes videos to higher quality formats (H.264 High Profile or H.265/HEVC) using hardware acceleration when available, significantly improving video quality while maintaining efficient file sizes.
+The problem is that Synology Photos generates these intermediate videos with very poor quality, especially when videos are uploaded via the web interface. The transcodes are created using **H.264 baseline profile** and a framerate of only **15 fps**. The result is files that take up more space than necessary, look noticeably bad, and can even cause playback issues. Imagine trying to play your videos on a Chromecast and seeing them stutter because of the 15 fps limitation — it’s simply not acceptable.
+
+This tool solves that problem by automatically improving the quality of those intermediate videos. It retranscodes them into more efficient and modern formats (**H.264 High Profile** or **H.265/HEVC**), using hardware acceleration when available. The result is a significant improvement in visual quality while keeping file sizes efficient. Optionally, the transcoding process and its statistics can be monitored using **Grafana dashboards**.
+
+## TL;DR
+
+Synology Photos creates very low-quality intermediate videos (15 fps, H.264 baseline).
+This tool automatically re-transcodes them to modern formats with hardware acceleration, fixing playback issues and improving visual quality.
+
 
 ## Features
 
@@ -25,7 +31,7 @@ This tool automatically detects and transcodes videos to higher quality formats 
 - **Comprehensive logging**: Detailed logging system with configurable levels
 - **High test coverage**: 89% code coverage ensuring reliability
 
-## Architecture
+## Container Architecture
 
 The Docker image is built on:
 - **Base**: Debian Bookworm (slim)
@@ -43,7 +49,7 @@ The image uses Jellyfin's pre-built FFmpeg package, which includes all necessary
 
 ## Quick Start
 
-Configuration is loaded **only from environment variables** (.env + volumes management in docker-compose). Both `.env.example` and `docker-compose.yml` files are provided with detailed information.
+Configuration is loaded **only from environment variables** (.env + volumes management in docker-compose). Both `env.example` and `docker-compose.yml` files are provided with detailed information.
 
 ### 1. Configuration
 
@@ -94,7 +100,7 @@ The application needs access to all photo directories. You must mount:
 
 #### 1.3 Create .env File
 
-Based on `.env.example`, create a `.env` file that must be saved on the NAS at the same level as `docker-compose.yml`. Modify the necessary variables according to your needs.
+Based on `env.example`, create a `.env` file that must be saved on the NAS at the same level as `docker-compose.yml`. Modify the necessary variables according to your needs.
 
 **Environment Variables:**
 
@@ -125,7 +131,6 @@ Based on `.env.example`, create a `.env` file that must be saved on the NAS at t
 | `GRAFANA_USER` | `admin` | Grafana admin username. **Only needed if using Grafana monitoring** |
 | `GRAFANA_PASSWORD` | `admin` | Grafana admin password. **Only needed if using Grafana monitoring** |
 | `GRAFANA_PERSISTENCE_PATH` | `./grafana-data` | Path on the HOST where Grafana data (dashboards, users, etc.) will be stored. **Only needed if using Grafana monitoring** |
-| **Database Configuration** |
 | **Logger Configuration** |
 | `LOGGER_NAME` | `video-enhancer` | Logger name (used in log messages) |
 | `LOGGER_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
@@ -218,6 +223,8 @@ The project includes optional Grafana integration for visualizing transcoding st
    - Click **Save & Test** and confirm that everything is correct
    - **Note**: If it fails, check the path. If you changed `DATABASE_HOST_PATH` in `.env`, the database location may be different
 
+   ![SQLite Data Source Configuration](docs/images/grafana_database.png)
+
 5. **Create Dashboards:**
    - Go to **Dashboards** in the left panel
    - Create dashboards with queries to visualize:
@@ -226,6 +233,13 @@ The project includes optional Grafana integration for visualizing transcoding st
      - Videos by status
      - Error details
      - Processing statistics
+   - Alternatively, you can import the pre-configured dashboard from `docs/grafana-dashboard.json`:
+     - Go to **Dashboards** → **Import**
+     - Upload the `grafana-dashboard.json` file
+     - Select your SQLite data source
+     - Click **Import**
+
+   ![Full Grafana Dashboard](docs/images/full_grafana_dashboard.png)
 
 For ready-to-use SQL queries and the complete database schema, see:
 - [Grafana Queries Guide](docs/grafana-queries.md) - Ready-to-use SQL queries for dashboards
@@ -276,7 +290,7 @@ For ready-to-use SQL queries and the complete database schema, see:
 - 144p (256×144)
 - 240p (426×240)
 - 360p (640×360)
-- 480p (854×480) - Default
+- 480p (854×480)
 - 720p (1280×720) - HD
 - 1080p (1920×1080) - Full HD
 - 1440p (2560×1440) - 2K
@@ -292,7 +306,7 @@ For ready-to-use SQL queries and the complete database schema, see:
 - FLAC (lossless)
 
 **AAC Profiles:**
-- LC (Low Complexity) - Default
+- LC (Low Complexity)
 - HE (High Efficiency)
 - HE v2 (High Efficiency v2)
 
@@ -429,7 +443,7 @@ docker logs --tail 100 synology-photos-video-enhancer
 2025-01-04T12:01:33+0000 (video-enhancer) INFO | Transcoding completed successfully
 ```
 
-## Architecture
+## Software Architecture
 
 Uses **Hexagonal Architecture (Ports and Adapters)** pattern to ensure:
 - Clear separation between domain logic and infrastructure
