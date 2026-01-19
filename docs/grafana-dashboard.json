@@ -1,0 +1,722 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "panels": [],
+      "title": "General numbers",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "bf9n5w2xw5c00c"
+          },
+          "queryText": "SELECT COUNT(*) AS total\nFROM transcodings;\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS total\nFROM transcodings;\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Total videos",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 5,
+        "y": 1
+      },
+      "id": 7,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "sort": "desc",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "SELECT\n  CASE\n    WHEN status = 'completed' THEN 'transcoded'\n    ELSE status\n  END AS status,\n  COUNT(*) AS value\nFROM transcodings\nGROUP BY status;\n\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT\n  CASE\n    WHEN status = 'completed' THEN 'transcoded'\n    ELSE status\n  END AS status,\n  COUNT(*) AS value\nFROM transcodings\nGROUP BY status;\n\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Global status",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "from": 1.72,
+                "result": {
+                  "index": 0,
+                  "text": "16:9"
+                },
+                "to": 1.84
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 2.3,
+                "result": {
+                  "index": 1,
+                  "text": "21:9 (Cinemascope)"
+                },
+                "to": 2.45
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 1.56,
+                "result": {
+                  "index": 2,
+                  "text": "16:10"
+                },
+                "to": 1.64
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 1.45,
+                "result": {
+                  "index": 3,
+                  "text": "3:2"
+                },
+                "to": 1.55
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 1.28,
+                "result": {
+                  "index": 4,
+                  "text": "4:3 (PAL)"
+                },
+                "to": 1.38
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 0.54,
+                "result": {
+                  "index": 5,
+                  "text": "9:16"
+                },
+                "to": 0.6
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 0.64,
+                "result": {
+                  "index": 6,
+                  "text": "10:16 | 5:8"
+                },
+                "to": 0.72
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 0.72,
+                "result": {
+                  "index": 7,
+                  "text": "3:4"
+                },
+                "to": 0.8
+              },
+              "type": "range"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "orientation"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 118
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resolution"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 112
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "aspect_ratio"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 164
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 84
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 15,
+        "y": 1
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "WITH r AS (\n  SELECT\n    transcoded_video_resolution AS resolution,\n    CAST(substr(transcoded_video_resolution, 1, instr(transcoded_video_resolution, 'x') - 1) AS INTEGER) AS w,\n    CAST(substr(transcoded_video_resolution, instr(transcoded_video_resolution, 'x') + 1) AS INTEGER) AS h\n  FROM transcodings\n  WHERE transcoded_video_resolution IS NOT NULL\n    AND TRIM(transcoded_video_resolution) != ''\n    AND transcoded_video_resolution != '0x0'\n)\nSELECT\n  resolution,\n  CASE\n    WHEN w > h THEN 'horizontal'\n    WHEN w < h THEN 'vertical'\n    ELSE 'square'\n  END AS orientation,\n  ROUND(1.0 * w / h, 2) AS aspect_ratio,\n  COUNT(*) AS total\nFROM r\nGROUP BY resolution, orientation, aspect_ratio\nORDER BY total DESC;\n",
+          "queryType": "table",
+          "rawQueryText": "WITH r AS (\n  SELECT\n    transcoded_video_resolution AS resolution,\n    CAST(substr(transcoded_video_resolution, 1, instr(transcoded_video_resolution, 'x') - 1) AS INTEGER) AS w,\n    CAST(substr(transcoded_video_resolution, instr(transcoded_video_resolution, 'x') + 1) AS INTEGER) AS h\n  FROM transcodings\n  WHERE transcoded_video_resolution IS NOT NULL\n    AND TRIM(transcoded_video_resolution) != ''\n    AND transcoded_video_resolution != '0x0'\n)\nSELECT\n  resolution,\n  CASE\n    WHEN w > h THEN 'horizontal'\n    WHEN w < h THEN 'vertical'\n    ELSE 'square'\n  END AS orientation,\n  ROUND(1.0 * w / h, 2) AS aspect_ratio,\n  COUNT(*) AS total\nFROM r\nGROUP BY resolution, orientation, aspect_ratio\nORDER BY total DESC;\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Transcoded video resolutions",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 0,
+        "y": 7
+      },
+      "id": 4,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "SELECT\n  ROUND(\n    100.0 * SUM(CASE WHEN lower(status) IN ('completed','success') THEN 1 ELSE 0 END)\n    / NULLIF(SUM(CASE WHEN lower(status) IN ('completed','success','failed','error') THEN 1 ELSE 0 END), 0)\n  , 2) AS success_pct\nFROM transcodings;\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT\n  ROUND(\n    100.0 * SUM(CASE WHEN lower(status) IN ('completed','success') THEN 1 ELSE 0 END)\n    / NULLIF(SUM(CASE WHEN lower(status) IN ('completed','success','failed','error') THEN 1 ELSE 0 END), 0)\n  , 2) AS success_pct\nFROM transcodings;\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Success percent",
+      "type": "gauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 5,
+      "panels": [],
+      "title": "Transcoding process",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 14
+      },
+      "id": 6,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "SELECT COUNT(*) AS in_progress\nFROM transcodings\nWHERE lower(status) IN ('pending','in_progress');\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS in_progress\nFROM transcodings\nWHERE lower(status) IN ('pending','in_progress');\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Processing flows",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "original_video_path"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1035
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 18,
+        "x": 5,
+        "y": 14
+      },
+      "id": 10,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "SELECT\n  original_video_path,\n  status\nFROM transcodings\nORDER BY rowid DESC\nLIMIT 5;\n\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT\n  original_video_path,\n  status\nFROM transcodings\nORDER BY rowid DESC\nLIMIT 5;\n\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Last 5 transcodings",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "bf9n5w2xw5c00c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 23,
+        "x": 0,
+        "y": 21
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.3",
+      "targets": [
+        {
+          "queryText": "SELECT\n  error_message,\n  COUNT(*) AS occurrences\nFROM transcodings\nWHERE error_message IS NOT NULL\n  AND TRIM(error_message) != ''\nGROUP BY error_message\nORDER BY occurrences DESC\nLIMIT 5;\n",
+          "queryType": "table",
+          "rawQueryText": "SELECT\n  error_message,\n  COUNT(*) AS occurrences\nFROM transcodings\nWHERE error_message IS NOT NULL\n  AND TRIM(error_message) != ''\nGROUP BY error_message\nORDER BY occurrences DESC\nLIMIT 5;\n",
+          "refId": "A",
+          "timeColumns": [
+            "time",
+            "ts"
+          ]
+        }
+      ],
+      "title": "Top 5 errors",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "refresh": "auto",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5y",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": []
+  },
+  "timezone": "browser",
+  "title": "Synology Photo - Video Enhancer",
+  "uid": "adkprjt",
+  "version": 7
+}

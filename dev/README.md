@@ -86,7 +86,7 @@ If you prefer to run locally without Docker:
    pip install -r dev/requirements-dev.txt
    ```
 
-2. Set environment variables (see `.env.example`):
+2. Set environment variables (see `env.example`):
    ```bash
    export MEDIA_HOST_PATH=/path/to/media
    export MEDIA_APP_PATH=/media
@@ -132,7 +132,7 @@ docker exec -it synology-photos-video-enhancer-debug /bin/sh
 
 ## 📝 Environment Variables
 
-See `.env.example` in the root directory for all available environment variables.
+See `env.example` in the root directory for all available environment variables.
 
 Key variables for development:
 - `MEDIA_HOST_PATH` - Path to media directory on host (default: `../dev/media`)

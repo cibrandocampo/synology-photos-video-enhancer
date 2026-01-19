@@ -37,7 +37,7 @@ src/
 
 **Never contains business logic** - only composition and initialization.
 
-### `infrastructure/config/settings.py` - Configuration Loader
+### `infrastructure/config/config.py` - Configuration Loader
 
 **Responsibility**: Load configuration from environment variables
 
@@ -45,6 +45,7 @@ src/
 - Returns `AppConfig` domain model
 - **No other module reads os.environ directly**
 - The domain model (`AppConfig`) is in `domain/models/app_config.py`
+- Uses lazy loading: each section is loaded only when accessed
 
 ### `controllers/main_controller.py` - Main Controller
 
@@ -173,7 +174,7 @@ ProcessVideosUseCase
 
 Each module has one clear responsibility:
 - `main.py` → Composition
-- `infrastructure/config/settings.py` → Configuration loading
+- `infrastructure/config/config.py` → Configuration loading
 - `domain/models/app_config.py` → Configuration structure
 - `main_controller.py` → Main entry point controller
 - `process_videos_use_case.py` → Orchestration
@@ -195,7 +196,7 @@ Each module has one clear responsibility:
 
 | Requirement | Who Does It |
 |------------|-------------|
-| Read configuration | `main.py` + `infrastructure/config/settings.py` |
+| Read configuration | `main.py` + `infrastructure/config/config.py` |
 | Detect hardware | `HardwareInfo` (infrastructure) |
 | Connect to database | `main.py` |
 | Create tables | `main.py` (or migrations) |
@@ -222,31 +223,37 @@ python main.py --only-new      # Only process new videos
 
 ## Configuration
 
-Configuration is loaded from:
-1. Environment variables (takes precedence)
-2. Configuration file (default: `photo-enhancer/video_quality_enhancer.conf`)
+Configuration is loaded **only from environment variables**. See `env.example` in the root directory for all available variables.
 
-### Environment Variables
+### Main Environment Variables
 
-- `CONFIG_FILE_PATH` - Path to configuration file
-- `DATABASE_PATH` - Path to SQLite database
-- `LOGGER_NAME` - Logger name
-- `LOGGER_LEVEL` - Logging level (DEBUG, INFO, WARNING, ERROR)
+**Paths:**
+- `MEDIA_APP_PATH` - Path inside container where media is mounted (default: `/media`)
+- `DATABASE_APP_PATH` - Path inside container where database is stored (default: `data/transcodings.db`)
 
-### Configuration File
+**Transcoding Resources:**
+- `HW_TRANSCODING` - Enable hardware transcoding (True/False, default: True)
+- `EXECUTION_THREADS` - Number of threads for FFmpeg (default: 2)
+- `STARTUP_DELAY` - Minutes to wait before first execution (default: 30)
+- `EXECUTION_INTERVAL` - Minutes between periodic executions (default: 240)
 
-```ini
-[InputFolders]
-VIDEO_PATH = /data
+**Video Settings:**
+- `VIDEO_CODEC` - Video codec: h264, hevc, mpeg4, etc. (default: h264)
+- `VIDEO_BITRATE` - Video bitrate in kbps (default: 2048)
+- `VIDEO_RESOLUTION` - Resolution: 144p, 240p, 360p, 480p, 720p, 1080p, etc. (default: 720p)
+- `VIDEO_PROFILE` - Video profile (codec-specific, optional)
 
-[OutputVideo]
-VIDEO_CODEC = h264
-VIDEO_BITRATE = 2048k
-VIDEO_MAX_H_W = 720
-AUDIO_CODEC = aac
-AUDIO_BITRATE = 128k
-AUDIO_CHANNELS = 1
-```
+**Audio Settings:**
+- `AUDIO_CODEC` - Audio codec: aac, mp3, ac3, etc. (default: aac)
+- `AUDIO_BITRATE` - Audio bitrate in kbps (default: 128)
+- `AUDIO_CHANNELS` - Number of audio channels: 1 or 2 (default: 1)
+- `AUDIO_PROFILE` - Audio profile (only for AAC, optional)
+
+**Logger:**
+- `LOGGER_NAME` - Logger name (default: synology-photos-video-enhancer)
+- `LOGGER_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
+
+For a complete list of all environment variables and their descriptions, see `env.example` in the root directory.
 
 ## Adding New Features
 
