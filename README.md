@@ -7,7 +7,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-![Grafana Dashboard](docs/images/small_grafana_dashboard.png)
+![Grafana Dashboard](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/small_grafana_dashboard.png)
 
 Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video’s codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
@@ -223,7 +223,7 @@ The project includes optional Grafana integration for visualizing transcoding st
    - Click **Save & Test** and confirm that everything is correct
    - **Note**: If it fails, check the path. If you changed `DATABASE_HOST_PATH` in `.env`, the database location may be different
 
-   ![SQLite Data Source Configuration](docs/images/grafana_database.png)
+   ![SQLite Data Source Configuration](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/grafana_database.png)
 
 5. **Create Dashboards:**
    - Go to **Dashboards** in the left panel
@@ -239,7 +239,7 @@ The project includes optional Grafana integration for visualizing transcoding st
      - Select your SQLite data source
      - Click **Import**
 
-   ![Full Grafana Dashboard](docs/images/full_grafana_dashboard.png)
+   ![Full Grafana Dashboard](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/full_grafana_dashboard.png)
 
 For ready-to-use SQL queries and the complete database schema, see:
 - [Grafana Queries Guide](docs/grafana-queries.md) - Ready-to-use SQL queries for dashboards
