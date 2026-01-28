@@ -38,7 +38,7 @@ SELECT * FROM transcodings LIMIT 1;
 Example row:
 ```
 original_video_path: /media/photos/vacation/video.mp4
-transcoded_video_path: /media/photos/vacation/@eaDir/video/SYNOPHOTO_FILM_H.mp4
+transcoded_video_path: /media/photos/vacation/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4
 transcoded_video_resolution: 1920x1080
 transcoded_video_codec: h264
 status: completed

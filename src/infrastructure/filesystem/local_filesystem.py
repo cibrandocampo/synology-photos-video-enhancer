@@ -1,7 +1,7 @@
 """Local filesystem implementation."""
 import os
 import glob
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 from domain.ports.filesystem import Filesystem
@@ -40,6 +40,20 @@ class LocalFilesystem(Filesystem):
     def file_exists(self, path: str) -> bool:
         """Checks if a file exists."""
         return os.path.isfile(path)
+
+    def read_file(self, path: str) -> Optional[str]:
+        """Reads file contents, returns None if file does not exist."""
+        if not os.path.isfile(path):
+            return None
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception:
+            return None
+
+    def ensure_directory(self, path: str) -> None:
+        """Ensures directory exists, creating parents if needed."""
+        os.makedirs(path, exist_ok=True)
     
     def find_transcoded_video(self, original_video_path: str) -> str:
         """Finds the transcoded video file associated with an original video."""

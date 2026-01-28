@@ -1,2 +1,2 @@
-"""Synology Photos Video Enhancer - Refactorizado con DDD."""
+"""Synology Photos Video Enhancer."""
 

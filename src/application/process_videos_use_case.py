@@ -1,15 +1,14 @@
 """Use case for processing videos."""
-from pathlib import Path
+import os
 from domain.models.transcoding import Transcoding, TranscodingConfiguration, TranscodingStatus
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.ports.video_repository import VideoRepository
 from domain.ports.filesystem import Filesystem
-from domain.ports.hardware_info import HardwareInfo
+from domain.ports.transcoder_factory import TranscoderFactory
+from domain.ports.logger import AppLogger
 from domain.constants.container import ContainerFormat
 from domain.constants.framerate import FrameRate
 from application.process_result import ProcessResult
-from infrastructure.logger import Logger
-from infrastructure.transcoder.ffmpeg_transcoder import FFmpegTranscoder
 from domain.models.app_config import AudioConfig, VideoConfig
 
 
@@ -21,7 +20,8 @@ class ProcessVideosUseCase:
         self,
         video_repository: VideoRepository,
         filesystem: Filesystem,
-        hardware_info: HardwareInfo,
+        transcoder_factory: TranscoderFactory,
+        logger: AppLogger,
         video_config: VideoConfig,
         audio_config: AudioConfig,
         video_input_path: str,
@@ -29,11 +29,12 @@ class ProcessVideosUseCase:
     ):
         """
         Initializes the use case.
-        
+
         Args:
             video_repository: Repository for video operations
             filesystem: Filesystem operations
-            hardware_info: Hardware information for transcoding
+            transcoder_factory: Factory to create transcoder instances
+            logger: Logger instance
             video_config: Video configuration (codec, bitrate, resolution, profile)
             audio_config: Audio configuration (codec, bitrate, channels)
             video_input_path: Root path to search for videos
@@ -41,12 +42,12 @@ class ProcessVideosUseCase:
         """
         self.video_repository = video_repository
         self.filesystem = filesystem
-        self.hardware_info = hardware_info
+        self.transcoder_factory = transcoder_factory
         self.video_config = video_config
         self.audio_config = audio_config
         self.video_input_path = video_input_path
         self.execution_threads = execution_threads
-        self.logger = Logger.get_logger()
+        self.logger = logger
         
         # Calculate target resolution and codec for validation
         self.target_resolution = max(video_config.width, video_config.height)
@@ -162,10 +163,13 @@ class ProcessVideosUseCase:
         self.video_repository.save(transcoding)
         
         # Execute transcoding
-        transcoder = FFmpegTranscoder(transcoding, self.hardware_info)
+        transcoder = self.transcoder_factory.create(transcoding)
         success = transcoder.transcode()
     
-        transcoding.status = TranscodingStatus.COMPLETED if success else TranscodingStatus.FAILED
+        if success:
+            transcoding = transcoding.mark_as_completed()
+        else:
+            transcoding = transcoding.mark_as_failed("Transcoding failed")
         self.video_repository.save(transcoding)
         
         return success
@@ -258,12 +262,13 @@ class ProcessVideosUseCase:
         Returns:
             Video object with metadata from SYNOINDEX_MEDIA_INFO, or placeholder if file doesn't exist
         """
-        video_file = Path(video_path)
-        ea_dir = video_file.parent / '@eaDir' / video_file.name
-        syno_file = ea_dir / "SYNOINDEX_MEDIA_INFO"
-        
-        # If file doesn't exist, return a placeholder
-        if not syno_file.exists():
+        video_dir = os.path.dirname(video_path)
+        video_name = os.path.basename(video_path)
+        syno_file = os.path.join(video_dir, '@eaDir', video_name, "SYNOINDEX_MEDIA_INFO")
+
+        content = self.filesystem.read_file(syno_file)
+
+        if content is None:
             self.logger.warning(f"SYNOINDEX_MEDIA_INFO not found for {video_path}, using placeholder")
             return Video(
                 path=video_path,
@@ -271,11 +276,9 @@ class ProcessVideosUseCase:
                 audio_track=AudioTrack(),
                 container=Container(format="")
             )
-        
+
         try:
-            # Read the file
-            with open(syno_file, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
+            lines = content.splitlines(keepends=True)
             
             # The main data is in line 2 (index 1)
             if len(lines) < 2:
@@ -313,7 +316,8 @@ class ProcessVideosUseCase:
         Returns:
             Output path for transcoded video
         """
-        video_file = Path(original_path)
-        ea_dir = video_file.parent / '@eaDir' / video_file.name
-        ea_dir.mkdir(parents=True, exist_ok=True)
-        return str(ea_dir / "SYNOPHOTO_FILM_H.mp4")
+        video_dir = os.path.dirname(original_path)
+        video_name = os.path.basename(original_path)
+        ea_dir = os.path.join(video_dir, '@eaDir', video_name)
+        self.filesystem.ensure_directory(ea_dir)
+        return os.path.join(ea_dir, "SYNOPHOTO_FILM_H.mp4")

@@ -63,10 +63,8 @@ class Config:
         """
         return cls()
     
-    def log_config(self):
+    def log_config(self, logger):
         """Logs the current configuration."""
-        from infrastructure.logger import Logger
-        logger = Logger.get_logger()
         logger.info("Loading configuration...")
         # Ensure all sections are loaded
         _ = self.paths

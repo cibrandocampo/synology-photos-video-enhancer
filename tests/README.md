@@ -7,7 +7,8 @@ Test suite for Synology Photos Video Enhancer following Hexagonal Architecture p
 ```
 tests/
 ├── __init__.py
-├── conftest.py              # Shared fixtures and configuration
+├── conftest.py                # Shared fixtures and configuration
+├── test_main.py               # Tests for main.py (composition root)
 ├── domain/
 │   ├── test_constants_video.py
 │   ├── test_constants_audio.py
@@ -29,6 +30,7 @@ tests/
 │   ├── test_hardware_info.py
 │   ├── test_logger.py
 │   ├── test_transcoder.py
+│   ├── test_transcoder_factory.py
 │   ├── test_utils.py
 │   └── test_video_repository.py
 └── controllers/
@@ -102,11 +104,16 @@ Common fixtures are defined in `conftest.py`:
 - `temp_dir`: Temporary directory for test files
 - `temp_db_path`: Temporary database path
 - `mock_video_repository`: Mock VideoRepository
-- `mock_filesystem`: Mock Filesystem
+- `mock_filesystem`: Mock Filesystem (includes `read_file`, `ensure_directory`)
 - `mock_hardware_info`: Mock HardwareInfo
+- `mock_logger`: Mock AppLogger
 - `mock_transcoder`: Mock Transcoder
+- `mock_transcoder_factory`: Mock TranscoderFactory
 - `sample_video`: Sample Video object
 - `sample_transcoding_configuration`: Sample TranscodingConfiguration
+- `sample_video_track`: Sample VideoTrack object
+- `sample_audio_track`: Sample AudioTrack object
+- `sample_container`: Sample Container object
 
 ## Writing New Tests
 

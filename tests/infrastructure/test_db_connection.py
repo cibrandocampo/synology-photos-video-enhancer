@@ -3,6 +3,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock
 from domain.models.app_config import DatabaseConfig
 from infrastructure.db.connection import DatabaseConnection
 
@@ -13,7 +14,7 @@ class TestDatabaseConnection:
     def test_init_creates_engine(self, temp_db_path):
         """Test that __init__ creates SQLAlchemy engine."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         assert conn.config == db_config
         assert conn.engine is not None
@@ -22,14 +23,14 @@ class TestDatabaseConnection:
     def test_is_empty_new_database(self, temp_db_path):
         """Test is_empty returns True for new database."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         assert conn.is_empty() is True
     
     def test_is_empty_existing_database(self, temp_db_path):
         """Test is_empty returns False for existing database with tables."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         # Create tables
         conn.create_tables()
@@ -39,14 +40,14 @@ class TestDatabaseConnection:
     def test_has_all_tables_empty_database(self, temp_db_path):
         """Test has_all_tables returns False for empty database."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         assert conn.has_all_tables() is False
     
     def test_has_all_tables_with_tables(self, temp_db_path):
         """Test has_all_tables returns True when tables exist."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         # Create tables
         conn.create_tables()
@@ -56,7 +57,7 @@ class TestDatabaseConnection:
     def test_create_tables(self, temp_db_path):
         """Test create_tables creates database tables."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         conn.create_tables()
         
@@ -67,7 +68,7 @@ class TestDatabaseConnection:
     def test_get_session(self, temp_db_path):
         """Test get_session returns a session."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         session = conn.get_session()
         
@@ -77,7 +78,7 @@ class TestDatabaseConnection:
     def test_initialize_empty_database(self, temp_db_path):
         """Test initialize creates tables for empty database."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         conn.initialize()
         
@@ -87,7 +88,7 @@ class TestDatabaseConnection:
     def test_initialize_existing_database(self, temp_db_path):
         """Test initialize verifies tables for existing database."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         # Create tables first
         conn.create_tables()
@@ -106,7 +107,7 @@ class TestDatabaseConnection:
         # Create database file but without tables (just create empty file)
         Path(temp_db_path).touch()
         
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         # Should raise RuntimeError because database exists but has no tables
         # Actually, if database is empty (no tables), it will create them
@@ -124,7 +125,7 @@ class TestDatabaseConnection:
         from infrastructure.db.models import TranscodingModel
         
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         
         # Create database with a different table (not the required one)
         # This simulates a database that exists but doesn't have the right schema

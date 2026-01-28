@@ -12,6 +12,7 @@ src/
 ├── controllers/               # Interface adapters (CLI, future: API, Web)
 ├── application/               # Use cases - orchestration layer
 ├── domain/                    # Business logic - core of the application
+│   ├── constants/            # Enums and constants
 │   ├── models/               # Domain entities
 │   └── ports/                # Interfaces (contracts)
 └── infrastructure/            # Infrastructure adapters (implementations)
@@ -19,7 +20,8 @@ src/
     ├── db/                   # Database implementation
     ├── filesystem/           # Filesystem operations
     ├── hardware/             # Hardware detection
-    └── transcoder/           # Video transcoding
+    ├── transcoder/           # Video transcoding
+    └── logger.py             # Logging system
 ```
 
 ## Directory Structure
@@ -68,14 +70,14 @@ src/
 
 This is the **heart of the application**. It orchestrates:
 
-1. Get hardware information
-2. Decide transcoding policy
-3. List videos from filesystem
-4. For each video:
+1. List videos from filesystem
+2. For each video:
    - Check if already transcoded (via repository)
-   - If not, determine transcoding parameters
-   - Transcode video
-   - Persist result
+   - Read video metadata (via filesystem)
+   - Determine transcoding parameters
+   - Create transcoder (via factory) and transcode
+   - Update transcoding status using immutable domain methods
+   - Persist result (via repository)
 
 **Depends ONLY on interfaces (ports)**, not concrete implementations.
 
@@ -85,7 +87,7 @@ This is the **heart of the application**. It orchestrates:
 
 - `video.py` - Video entity with metadata
 - `transcoding.py` - Transcoding entity with status
-- `hardware.py` - Hardware-related enums (CPUVendor, HardwareBackend)
+- `hardware.py` - Hardware-related models (CPUVendor, HardwareVideoAcceleration)
 
 **No infrastructure concerns here** - pure domain logic.
 
@@ -96,9 +98,11 @@ This is the **heart of the application**. It orchestrates:
 These are **contracts**, not implementations:
 
 - `video_repository.py` - Video persistence operations
-- `filesystem.py` - Filesystem operations
+- `filesystem.py` - Filesystem operations (find videos, read files, ensure directories)
 - `hardware_info.py` - Hardware information
 - `transcoder.py` - Video transcoding operations
+- `transcoder_factory.py` - Factory for creating transcoder instances
+- `logger.py` - Application logging interface
 
 The use case only knows about these interfaces, making it testable and independent of infrastructure.
 
@@ -120,6 +124,8 @@ The use case only knows about these interfaces, making it testable and independe
 - Finds video files
 - Filters Synology directories (@eaDir, #recycle)
 - Finds transcoded videos in @eaDir structure
+- Reads file contents
+- Ensures directories exist
 
 **Implements** `domain/ports/filesystem.py`
 
@@ -138,12 +144,30 @@ The use case only knows about these interfaces, making it testable and independe
 
 **Responsibility**: Execute ffmpeg commands
 
-- Builds ffmpeg commands
+- Builds ffmpeg commands for each hardware backend (QSV, VAAPI, V4L2M2M, software)
 - Executes transcoding process
 - Handles process errors
-- Reads video metadata via ffprobe
 
 **Implements** `domain/ports/transcoder.py`
+
+### `infrastructure/transcoder/ffmpeg_transcoder_factory.py`
+
+**Responsibility**: Create FFmpegTranscoder instances
+
+- Receives hardware info and logger via dependency injection
+- Creates transcoders with the correct dependencies
+
+**Implements** `domain/ports/transcoder_factory.py`
+
+### `infrastructure/logger.py`
+
+**Responsibility**: Logging
+
+- Configures the root Python logger
+- Provides `EnhancedLogger` with `title()` and `subtitle()` methods
+- Auto-detects calling module name for log messages
+
+**Implements** `domain/ports/logger.py`
 
 **The domain never sees ffmpeg directly.**
 
@@ -156,10 +180,10 @@ MainController
     ↓
 ProcessVideosUseCase
     ↓
-    ├─→ Filesystem (port) → LocalFilesystem (implementation)
-    ├─→ VideoRepository (port) → VideoRepositorySQL (implementation)
-    ├─→ HardwareInfo (port) → LocalHardwareInfo (implementation)
-    └─→ Transcoder (port) → FFmpegTranscoder (implementation)
+    ├─→ Filesystem (port)         → LocalFilesystem (implementation)
+    ├─→ VideoRepository (port)    → VideoRepositorySQL (implementation)
+    ├─→ TranscoderFactory (port)  → FFmpegTranscoderFactory → FFmpegTranscoder
+    └─→ AppLogger (port)          → EnhancedLogger (implementation)
 ```
 
 ## Key Principles
@@ -198,11 +222,14 @@ Each module has one clear responsibility:
 |------------|-------------|
 | Read configuration | `main.py` + `infrastructure/config/config.py` |
 | Detect hardware | `HardwareInfo` (infrastructure) |
-| Connect to database | `main.py` |
-| Create tables | `main.py` (or migrations) |
+| Connect to database | `main.py` + `DatabaseConnection` (infrastructure) |
+| Create tables | `DatabaseConnection` (infrastructure) |
 | List directories | `Filesystem` (infrastructure) |
+| Read files / ensure dirs | `Filesystem` (infrastructure) |
 | Verify transcodings | `VideoRepository` (infrastructure) |
+| Create transcoders | `TranscoderFactory` (infrastructure) |
 | Execute ffmpeg | `Transcoder` (infrastructure) |
+| Logging | `AppLogger` (port) / `EnhancedLogger` (infrastructure) |
 | Orchestrate everything | `ProcessVideosUseCase` |
 
 ## Usage

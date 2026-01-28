@@ -12,17 +12,17 @@ help:
 test: test-build test-run
 
 test-build:
-	docker-compose -f dev/docker-compose.test.yml build
+	docker compose -f dev/docker compose.test.yml build
 
 test-run:
-	docker-compose -f dev/docker-compose.test.yml up --abort-on-container-exit
+	docker compose -f dev/docker compose.test.yml up --abort-on-container-exit
 
 test-clean:
-	docker-compose -f dev/docker-compose.test.yml down -v
-	docker-compose -f dev/docker-compose.test.yml rm -f
+	docker compose -f dev/docker compose.test.yml down -v
+	docker compose -f dev/docker compose.test.yml rm -f
 
 dev:
-	cd dev && docker compose -f docker-compose.dev.yml up --build
+	cd dev && docker compose -f docker compose.dev.yml up --build
 
 debug:
-	cd dev && docker compose -f docker-compose.debug.yml up --build
+	cd dev && docker compose -f docker compose.debug.yml up --build

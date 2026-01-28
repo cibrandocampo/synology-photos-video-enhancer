@@ -12,7 +12,7 @@ dev/
 └── media/                      # Development media files (gitignored)
 ```
 
-## 🐛 Debugging with Breakpoints (Recommended)
+## Debugging with Breakpoints (Recommended)
 
 This is the best option for step-by-step debugging with breakpoints.
 
@@ -37,13 +37,13 @@ The container will keep running and waiting for debugger connections.
 3. Press F5 or click "Start Debugging"
 
 The debugger will connect to the container and you can:
-- ✅ Set breakpoints on any line
-- ✅ View variables in real-time
-- ✅ Step through code (F10, F11)
-- ✅ Evaluate expressions
-- ✅ View the call stack
-- ✅ **Restart the debugger** (circular green arrow) - automatically reconnects
-- ✅ Container stays running, you only need to connect/reconnect the debugger
+- Set breakpoints on any line
+- View variables in real-time
+- Step through code (F10, F11)
+- Evaluate expressions
+- View the call stack
+- **Restart the debugger** (circular green arrow) - automatically reconnects
+- Container stays running, you only need to connect/reconnect the debugger
 
 **Note**: When you restart the debugger (circular arrow), it will automatically reconnect. If the program has already finished, you'll need to click "Play" to start a new execution.
 
@@ -56,7 +56,7 @@ The debug container:
 - Mounts your `src/` directory for live code changes
 - Mounts `dev/media/` as the media directory
 
-## 🚀 Development Mode (Without Debugger)
+## Development Mode (Without Debugger)
 
 For running the application in development mode without debugging:
 
@@ -76,7 +76,7 @@ This will:
 - Enable interactive mode
 - Run the application directly
 
-## 🔧 Local Development (Without Docker)
+## Local Development (Without Docker)
 
 If you prefer to run locally without Docker:
 
@@ -102,7 +102,7 @@ If you prefer to run locally without Docker:
 
 4. For debugging locally, select **"Python: Run Locally"** in the debugger and press F5.
 
-## 📁 Development Media
+## Development Media
 
 Place test videos in `dev/media/` directory. This directory is gitignored.
 
@@ -116,7 +116,7 @@ dev/media/
             └── SYNOINDEX_MEDIA_INFO
 ```
 
-## 🔍 Opening a Shell in Container
+## Opening a Shell in Container
 
 To open an interactive shell in a running container:
 
@@ -130,7 +130,7 @@ Or for the debug container:
 docker exec -it synology-photos-video-enhancer-debug /bin/sh
 ```
 
-## 📝 Environment Variables
+## Environment Variables
 
 See `env.example` in the root directory for all available environment variables.
 
@@ -140,7 +140,7 @@ Key variables for development:
 - `DATABASE_HOST_PATH` - Path to database directory on host (default: `../data`)
 - `LOGGER_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR (default: `INFO`)
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Port 5678 already in use
 

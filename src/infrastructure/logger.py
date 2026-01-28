@@ -3,27 +3,41 @@ import inspect
 import logging
 from typing import Optional
 
+from domain.ports.logger import AppLogger
 
-class EnhancedLogger:
+
+class EnhancedLogger(AppLogger):
     """Enhanced logger with title and subtitle methods."""
-    
+
     def __init__(self, logger: logging.Logger):
         """
         Initializes the enhanced logger.
-        
+
         Args:
             logger: Standard logging.Logger instance
         """
         self._logger = logger
-    
+
     def __getattr__(self, name):
         """Delegates all other attributes to the underlying logger."""
         return getattr(self._logger, name)
-    
+
+    def info(self, msg: str, *args, **kwargs) -> None:
+        """Logs an informational message."""
+        self._logger.info(msg, *args, **kwargs)
+
+    def warning(self, msg: str, *args, **kwargs) -> None:
+        """Logs a warning message."""
+        self._logger.warning(msg, *args, **kwargs)
+
+    def error(self, msg: str, *args, **kwargs) -> None:
+        """Logs an error message."""
+        self._logger.error(msg, *args, **kwargs)
+
     def title(self, text: str, char: str = "=") -> None:
         """
         Logs a title with automatic border calculation.
-        
+
         Args:
             text: Title text
             char: Character to use for border (default: "=")
@@ -32,11 +46,11 @@ class EnhancedLogger:
         self._logger.info(border)
         self._logger.info(text)
         self._logger.info(border)
-    
+
     def subtitle(self, text: str, char: str = "-") -> None:
         """
         Logs a subtitle with automatic border calculation.
-        
+
         Args:
             text: Subtitle text
             char: Character to use for border (default: "-")
@@ -108,16 +122,8 @@ class Logger:
         default_level = "INFO"
         default_name = "synology-photos-video-enhancer"
         
-        # Try to get config, but use defaults if it causes circular dependency
         if not level:
-            try:
-                from infrastructure.config.config import Config
-                config = Config.get_instance()
-                level = config.logger.level
-            except (RuntimeError, AttributeError, Exception):
-                level = default_level
-        else:
-            level = level
+            level = default_level
         
         # Configure root logger once (all children inherit this)
         Logger._configure_root_logger(level)
@@ -142,14 +148,9 @@ class Logger:
             except Exception:
                 pass
             
-            # If auto-detection failed, try config or use default
+            # If auto-detection failed, use default
             if not name:
-                try:
-                    from infrastructure.config.config import Config
-                    config = Config.get_instance()
-                    name = config.logger.name
-                except (RuntimeError, AttributeError, Exception):
-                    name = default_name
+                name = default_name
         
         # Use logger name as cache key - each module gets its own EnhancedLogger
         # but all share the same underlying configuration

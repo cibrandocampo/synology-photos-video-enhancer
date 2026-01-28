@@ -61,9 +61,14 @@ class TestFFmpegTranscoder:
         return mock
     
     @pytest.fixture
-    def transcoder(self, sample_transcoding, mock_hardware_info):
+    def mock_logger(self):
+        """Creates a mock logger."""
+        return Mock()
+
+    @pytest.fixture
+    def transcoder(self, sample_transcoding, mock_hardware_info, mock_logger):
         """Creates an FFmpegTranscoder instance for testing."""
-        return FFmpegTranscoder(sample_transcoding, mock_hardware_info)
+        return FFmpegTranscoder(sample_transcoding, mock_hardware_info, mock_logger)
     
     def test_init_sets_hardware_backend(self, transcoder):
         """Test that __init__ sets hardware_backend correctly."""
@@ -128,11 +133,11 @@ class TestFFmpegTranscoder:
     def test_build_qsv_command(self, sample_transcoding):
         """Test building QSV command."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.QSV
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_qsv_command()
         
         # QSV command should use init_hw_device with qsv=hw: format
@@ -145,11 +150,11 @@ class TestFFmpegTranscoder:
     def test_build_vaapi_command(self, sample_transcoding):
         """Test building VAAPI command."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.VAAPI
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_vaapi_command()
         
         assert "-hwaccel" in cmd
@@ -159,11 +164,11 @@ class TestFFmpegTranscoder:
     def test_build_v4l2m2m_command(self, sample_transcoding):
         """Test building V4L2M2M command."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.V4L2M2M
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_v4l2m2m_command()
         
         assert "-pix_fmt" in cmd
@@ -172,11 +177,11 @@ class TestFFmpegTranscoder:
     def test_build_software_command(self, sample_transcoding):
         """Test building software command."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = None  # No hardware acceleration
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_software_command()
         
         # Software command should not have hardware-specific flags
@@ -194,14 +199,14 @@ class TestFFmpegTranscoder:
     def test_build_audio_command_with_channels(self, sample_transcoding):
         """Test building audio command includes channels when specified."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         # Create transcoding with audio channels > 0
         sample_transcoding.configuration.audio_channels = 2
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.VAAPI
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_audio_command()
         
         assert "-ac" in cmd
@@ -210,14 +215,14 @@ class TestFFmpegTranscoder:
     def test_build_audio_command_no_channels(self, sample_transcoding):
         """Test building audio command without channels."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         # Create transcoding with audio channels = 0
         sample_transcoding.configuration.audio_channels = 0
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.VAAPI
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_audio_command()
         
         # Should not include -ac when channels is 0
@@ -226,11 +231,11 @@ class TestFFmpegTranscoder:
     def test_build_qsv_command_includes_profile(self, sample_transcoding):
         """Test that QSV command includes profile when specified."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.QSV
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_qsv_command()
         
         # Should include profile if configured
@@ -240,11 +245,11 @@ class TestFFmpegTranscoder:
     def test_build_vaapi_command_includes_profile(self, sample_transcoding):
         """Test that VAAPI command includes profile when specified."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = HardwareVideoAcceleration.VAAPI
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_vaapi_command()
         
         # Should include profile if configured
@@ -254,11 +259,11 @@ class TestFFmpegTranscoder:
     def test_build_software_command_includes_profile(self, sample_transcoding):
         """Test that software command includes profile when specified."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = None
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_software_command()
         
         # Should include profile if configured
@@ -268,13 +273,13 @@ class TestFFmpegTranscoder:
     def test_build_software_command_no_profile(self, sample_transcoding):
         """Test that software command doesn't include profile when None."""
         from domain.models.hardware import HardwareVideoAcceleration
-        
+
         sample_transcoding.configuration.video_profile = None
-        
+
         mock_hw = Mock()
         mock_hw.video_acceleration = None
-        
-        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw)
+
+        transcoder = FFmpegTranscoder(sample_transcoding, mock_hw, Mock())
         cmd = transcoder._build_software_command()
         
         # Should not include profile when None
@@ -293,14 +298,10 @@ class TestFFmpegTranscoder:
         mock_subprocess.assert_called_once()
     
     @patch('infrastructure.transcoder.ffmpeg_transcoder.subprocess.run')
-    @patch('infrastructure.transcoder.ffmpeg_transcoder.Logger')
-    def test_transcode_failure_logs_error(self, mock_logger_class, mock_subprocess, transcoder):
+    def test_transcode_failure_logs_error(self, mock_subprocess, transcoder):
         """Test that transcoding failure logs error output."""
         import subprocess
-        
-        mock_logger = Mock()
-        mock_logger_class.get_logger.return_value = mock_logger
-        
+
         # Simulate CalledProcessError
         error = subprocess.CalledProcessError(
             returncode=1,
@@ -308,13 +309,13 @@ class TestFFmpegTranscoder:
             stderr=b"FFmpeg error: codec not found"
         )
         mock_subprocess.side_effect = error
-        
+
         result = transcoder.transcode()
-        
+
         assert result is False
-        mock_logger.warning.assert_called()
+        transcoder.logger.warning.assert_called()
         # Should log the error message
-        assert any("FFmpeg transcoding failed" in str(call) for call in mock_logger.warning.call_args_list)
+        assert any("FFmpeg transcoding failed" in str(call) for call in transcoder.logger.warning.call_args_list)
     
     @patch('infrastructure.transcoder.ffmpeg_transcoder.shutil.which')
     def test_transcode_ffmpeg_not_found(self, mock_which, transcoder):
@@ -326,14 +327,10 @@ class TestFFmpegTranscoder:
         assert result is False
     
     @patch('infrastructure.transcoder.ffmpeg_transcoder.subprocess.run')
-    @patch('infrastructure.transcoder.ffmpeg_transcoder.Logger')
-    def test_transcode_failure_no_stderr(self, mock_logger_class, mock_subprocess, transcoder):
+    def test_transcode_failure_no_stderr(self, mock_subprocess, transcoder):
         """Test that transcoding failure handles missing stderr."""
         import subprocess
-        
-        mock_logger = Mock()
-        mock_logger_class.get_logger.return_value = mock_logger
-        
+
         # Simulate CalledProcessError with no stderr
         error = subprocess.CalledProcessError(
             returncode=1,
@@ -341,8 +338,8 @@ class TestFFmpegTranscoder:
             stderr=None
         )
         mock_subprocess.side_effect = error
-        
+
         result = transcoder.transcode()
-        
+
         assert result is False
-        mock_logger.warning.assert_called()
+        transcoder.logger.warning.assert_called()

@@ -2,6 +2,7 @@
 import sys
 import signal
 import time
+from pathlib import Path
 import schedule
 
 from infrastructure.config.config import Config
@@ -9,10 +10,12 @@ from infrastructure.logger import Logger
 from infrastructure.db.connection import DatabaseConnection
 from infrastructure.db.video_repository_sql import VideoRepositorySQL
 from infrastructure.filesystem.local_filesystem import LocalFilesystem
-from infrastructure.hardware.local_hardware_info import LocalHardwareInfo
+from infrastructure.hardware.local_hardware_info import LocalHardwareInfo, HW_ACCELERATION_DEVICE_PATH
+from infrastructure.transcoder.ffmpeg_transcoder_factory import FFmpegTranscoderFactory
 from application.process_videos_use_case import ProcessVideosUseCase
 from controllers.main_controller import MainController
 from domain.constants.container import get_video_extensions
+from domain.models.hardware import CPUVendor
 
 
 # Global flag for graceful shutdown
@@ -75,13 +78,13 @@ def main():
     try:
         # 1. Load configuration
         config = Config.load()
-        config.log_config()
+        config.log_config(logger)
         
         # 2. Initialize infrastructure adapters (once, reused across all executions)
         logger.info("Initializing infrastructure adapters...")
         
         # Database connection
-        db_connection = DatabaseConnection(config.database)
+        db_connection = DatabaseConnection(config.database, logger)
         db_connection.initialize()
         
         # Repository
@@ -90,14 +93,28 @@ def main():
         # Filesystem
         filesystem = LocalFilesystem(get_video_extensions())
         
-        # Hardware info (logs internally, cached after first detection)
+        # Hardware info
         hardware_info = LocalHardwareInfo()
-        
+        logger.info("Detecting hardware...")
+        cpu = hardware_info.cpu
+        video_accel = hardware_info.video_acceleration
+        if cpu.vendor in (CPUVendor.INTEL, CPUVendor.AMD):
+            if not Path(HW_ACCELERATION_DEVICE_PATH).exists():
+                logger.warning(f"DRI device not found ({HW_ACCELERATION_DEVICE_PATH})")
+        logger.info("Hardware detected successfully")
+        logger.info(f"  - CPU: {cpu}")
+        hw_accel_verbose = video_accel.value if video_accel else 'Disabled'
+        logger.info(f"  - Hardware acceleration: {hw_accel_verbose}")
+
+        # Transcoder factory
+        transcoder_factory = FFmpegTranscoderFactory(hardware_info, logger)
+
         # 3. Build use case (reused across all executions)
         use_case = ProcessVideosUseCase(
             video_repository=video_repository,
             filesystem=filesystem,
-            hardware_info=hardware_info,
+            transcoder_factory=transcoder_factory,
+            logger=logger,
             video_config=config.transcoding.video,
             audio_config=config.transcoding.audio,
             video_input_path=config.paths.media_path,

@@ -3,22 +3,22 @@ import argparse
 
 from application.process_videos_use_case import ProcessVideosUseCase
 from application.process_result import ProcessResult
-from infrastructure.logger import Logger
+from domain.ports.logger import AppLogger
 
 
 class MainController:
     """Main controller for application execution."""
-    
-    def __init__(self, use_case: ProcessVideosUseCase, logger=None):
+
+    def __init__(self, use_case: ProcessVideosUseCase, logger: AppLogger):
         """
         Initializes the main controller.
-        
+
         Args:
             use_case: Process videos use case
-            logger: Logger instance (optional, will be created if not provided)
+            logger: Logger instance
         """
         self.use_case = use_case
-        self.logger = logger or Logger.get_logger()
+        self.logger = logger
     
     def run(self, args: argparse.Namespace = None) -> ProcessResult:
         """

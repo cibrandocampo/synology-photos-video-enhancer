@@ -2,6 +2,7 @@
 import pytest
 import os
 import tempfile
+from unittest.mock import Mock
 from domain.models.transcoding import Transcoding, TranscodingStatus
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.models.app_config import DatabaseConfig
@@ -16,7 +17,7 @@ class TestVideoRepositorySQL:
     def db_connection(self, temp_db_path):
         """Creates a database connection for testing."""
         db_config = DatabaseConfig(path=temp_db_path)
-        conn = DatabaseConnection(db_config)
+        conn = DatabaseConnection(db_config, Mock())
         conn.initialize()
         return conn
     
