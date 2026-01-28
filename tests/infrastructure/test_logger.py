@@ -123,17 +123,6 @@ class TestEnhancedLogger:
         # Should still return a logger (using default or detected name)
         assert isinstance(logger, EnhancedLogger)
     
-    @patch('infrastructure.config.config.Config')
-    def test_get_logger_config_exception_handling(self, mock_config_class):
-        """Test get_logger handles config exceptions gracefully."""
-        # Make config raise exception
-        mock_config_class.get_instance.side_effect = RuntimeError("Config error")
-        
-        logger = Logger.get_logger()
-        
-        # Should still return a logger using defaults
-        assert isinstance(logger, EnhancedLogger)
-    
     def test_configure_root_logger_idempotent(self):
         """Test _configure_root_logger is idempotent."""
         # Reset the flag

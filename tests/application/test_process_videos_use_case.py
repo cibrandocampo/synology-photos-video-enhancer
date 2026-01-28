@@ -39,13 +39,14 @@ class TestProcessVideosUseCase:
         )
     
     @pytest.fixture
-    def use_case(self, mock_video_repository, mock_filesystem, mock_hardware_info, 
-                 video_config, audio_config):
+    def use_case(self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
+                 mock_logger, video_config, audio_config):
         """Creates a ProcessVideosUseCase instance for testing."""
         return ProcessVideosUseCase(
             video_repository=mock_video_repository,
             filesystem=mock_filesystem,
-            hardware_info=mock_hardware_info,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
             video_config=video_config,
             audio_config=audio_config,
             video_input_path="/test/media",
@@ -286,68 +287,52 @@ class TestProcessVideosUseCase:
         # Skipping for now - can be implemented with a real example file
         pass
     
-    def test_read_video_metadata_file_not_exists(self, use_case, temp_dir):
+    def test_read_video_metadata_file_not_exists(self, use_case, mock_filesystem):
         """Test _read_video_metadata when file doesn't exist."""
-        import os
-        from pathlib import Path
-        
-        video_path = os.path.join(temp_dir, "nonexistent.mp4")
+        mock_filesystem.read_file.return_value = None
+
+        video_path = "/test/nonexistent.mp4"
         video = use_case._read_video_metadata(video_path)
-        
+
         assert video.path == video_path
         assert video.video_track.width == 0
         assert video.video_track.height == 0
     
-    def test_get_output_path(self, use_case, temp_dir):
+    def test_get_output_path(self, use_case, mock_filesystem, temp_dir):
         """Test _get_output_path creates correct path."""
         import os
-        from pathlib import Path
-        
+
         original_path = os.path.join(temp_dir, "video.mp4")
         output_path = use_case._get_output_path(original_path)
-        
+
         expected = os.path.join(temp_dir, "@eaDir", "video.mp4", "SYNOPHOTO_FILM_H.mp4")
         assert output_path == expected
-        
-        # Verify directory was created
-        assert Path(output_path).parent.exists()
+
+        # Verify ensure_directory was called
+        mock_filesystem.ensure_directory.assert_called_once()
     
-    def test_read_video_metadata_file_error_handling(self, use_case, temp_dir):
+    def test_read_video_metadata_file_error_handling(self, use_case, mock_filesystem):
         """Test _read_video_metadata handles file read errors."""
-        from pathlib import Path
-        
-        video_path = os.path.join(temp_dir, "video.mp4")
-        video_file = Path(video_path)
-        ea_dir = video_file.parent / '@eaDir' / video_file.name
-        ea_dir.mkdir(parents=True, exist_ok=True)
-        syno_file = ea_dir / "SYNOINDEX_MEDIA_INFO"
-        
-        # Create a file that will cause an error when reading (e.g., binary file)
-        with open(syno_file, 'wb') as f:
-            f.write(b'\x00\x01\x02\x03')  # Binary data
-        
+        # read_file returns None when file can't be read
+        mock_filesystem.read_file.return_value = None
+
+        video_path = "/test/video.mp4"
+
         # Should return placeholder video on error
         video = use_case._read_video_metadata(video_path)
-        
+
         assert video.path == video_path
         assert video.video_track.width == 0  # Placeholder values
     
-    def test_read_video_metadata_invalid_format(self, use_case, temp_dir):
+    def test_read_video_metadata_invalid_format(self, use_case, mock_filesystem):
         """Test _read_video_metadata handles invalid file format."""
-        from pathlib import Path
-        
-        video_path = os.path.join(temp_dir, "video.mp4")
-        video_file = Path(video_path)
-        ea_dir = video_file.parent / '@eaDir' / video_file.name
-        ea_dir.mkdir(parents=True, exist_ok=True)
-        syno_file = ea_dir / "SYNOINDEX_MEDIA_INFO"
-        
-        # Create file with only header (less than 2 lines)
-        with open(syno_file, 'w') as f:
-            f.write("header\n")  # Only one line
-        
+        # File has only header line (less than 2 lines)
+        mock_filesystem.read_file.return_value = "header\n"
+
+        video_path = "/test/video.mp4"
+
         video = use_case._read_video_metadata(video_path)
-        
+
         assert video.path == video_path
         assert video.video_track.width == 0  # Placeholder values
     

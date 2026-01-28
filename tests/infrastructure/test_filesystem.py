@@ -126,6 +126,42 @@ class TestLocalFilesystem:
         # Should return M (checked first in the list)
         assert result == str(transcoded_m)
     
+    def test_read_file_existing_file(self, filesystem, temp_dir):
+        """Test read_file returns contents of existing file."""
+        test_file = os.path.join(temp_dir, "test.txt")
+        Path(test_file).write_text("hello world", encoding="utf-8")
+
+        result = filesystem.read_file(test_file)
+
+        assert result == "hello world"
+
+    def test_read_file_nonexistent_file(self, filesystem):
+        """Test read_file returns None for nonexistent file."""
+        result = filesystem.read_file("/nonexistent/file.txt")
+
+        assert result is None
+
+    def test_read_file_read_error(self, filesystem, temp_dir):
+        """Test read_file returns None when file cannot be read."""
+        # Use a directory path instead of file path to cause an error
+        result = filesystem.read_file(temp_dir)
+
+        assert result is None
+
+    def test_ensure_directory_creates_directory(self, filesystem, temp_dir):
+        """Test ensure_directory creates a new directory."""
+        new_dir = os.path.join(temp_dir, "new", "nested", "dir")
+
+        filesystem.ensure_directory(new_dir)
+
+        assert os.path.isdir(new_dir)
+
+    def test_ensure_directory_existing_directory(self, filesystem, temp_dir):
+        """Test ensure_directory does not fail if directory already exists."""
+        filesystem.ensure_directory(temp_dir)
+
+        assert os.path.isdir(temp_dir)
+
     def test_find_videos_recursive(self, filesystem, temp_dir):
         """Test find_videos searches recursively."""
         # Create nested directory structure

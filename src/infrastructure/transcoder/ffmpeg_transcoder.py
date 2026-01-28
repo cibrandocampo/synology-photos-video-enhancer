@@ -10,23 +10,25 @@ from domain.models.transcoding import Transcoding
 from domain.constants.video import VideoCodec, SWVideoEncoder
 from domain.constants.hardware import HardwareBackend
 from domain.constants.audio import AudioCodec
-from infrastructure.logger import Logger
+from domain.ports.logger import AppLogger
 
 
 class FFmpegTranscoder(Transcoder):
     """FFmpeg-based transcoder implementation for a specific video transcoding."""
     
-    def __init__(self, transcoding: Transcoding, hardware_info: HardwareInfo):
+    def __init__(self, transcoding: Transcoding, hardware_info: HardwareInfo, logger: AppLogger):
         """
-        Initializes the FFmpeg transcoder for a specific video transcoding.       
-        
+        Initializes the FFmpeg transcoder for a specific video transcoding.
+
         Args:
             transcoding: Transcoding object containing all necessary information
             hardware_info: Hardware information to determine acceleration method
+            logger: Application logger
         """
-              
+
         self.transcoding: Transcoding = transcoding
         self.hardware_info: HardwareInfo = hardware_info
+        self.logger: AppLogger = logger
         
         # Convert HardwareVideoAcceleration to HardwareBackend
         self.hardware_backend: HardwareBackend = HardwareBackend.from_hardware_acceleration(
@@ -64,10 +66,9 @@ class FFmpegTranscoder(Transcoder):
             )
             return result.returncode == 0
         except subprocess.CalledProcessError as e:
-            logger = Logger.get_logger()
             error_output = e.stderr.decode('utf-8', errors='replace') if e.stderr else "No error output available"
-            logger.warning(f"FFmpeg transcoding failed for {self.transcoding.original_video.path}:")
-            logger.warning(error_output)
+            self.logger.warning(f"FFmpeg transcoding failed for {self.transcoding.original_video.path}:")
+            self.logger.warning(error_output)
             return False
     
     def _build_ffmpeg_command(self) -> List[str]:

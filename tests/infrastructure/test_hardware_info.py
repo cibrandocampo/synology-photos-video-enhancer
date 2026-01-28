@@ -11,22 +11,37 @@ class TestLocalHardwareInfo:
     
     @patch('infrastructure.hardware.local_hardware_info.cpuinfo.get_cpu_info')
     @patch('infrastructure.hardware.local_hardware_info.Path')
-    def test_init_detects_hardware(self, mock_path_class, mock_cpuinfo):
-        """Test that __init__ detects hardware."""
-        # Mock CPU info
+    def test_init_no_side_effects(self, mock_path_class, mock_cpuinfo):
+        """Test that __init__ does not trigger detection (lazy initialization)."""
+        hw_info = LocalHardwareInfo()
+
+        # Fields should be None until properties are accessed
+        assert hw_info._cpu_info is None
+        assert hw_info._video_acceleration is None
+
+        # cpuinfo should not be called during construction
+        mock_cpuinfo.assert_not_called()
+
+    @patch('infrastructure.hardware.local_hardware_info.cpuinfo.get_cpu_info')
+    @patch('infrastructure.hardware.local_hardware_info.Path')
+    def test_lazy_detection_on_property_access(self, mock_path_class, mock_cpuinfo):
+        """Test that hardware is detected lazily on property access."""
         mock_cpuinfo.return_value = {
             'vendor_id_raw': 'GenuineIntel',
             'brand_raw': 'Intel Core i7',
             'arch': 'x86_64'
         }
-        
-        # Mock Path.exists() to return True for DRI device
+
         mock_path_instance = Mock()
         mock_path_instance.exists.return_value = True
         mock_path_class.return_value = mock_path_instance
-        
+
         hw_info = LocalHardwareInfo()
-        
+
+        # Access properties to trigger detection
+        _ = hw_info.cpu
+        _ = hw_info.video_acceleration
+
         assert hw_info._cpu_info is not None
         assert hw_info._video_acceleration is not None
     

@@ -1,2 +1,2 @@
-"""Capa de infraestructura - Implementaciones concretas."""
+"""Infrastructure layer - Concrete implementations."""
 

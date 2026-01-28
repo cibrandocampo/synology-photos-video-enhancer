@@ -1,6 +1,6 @@
 """Port for filesystem operations."""
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 
 class Filesystem(ABC):
@@ -32,6 +32,29 @@ class Filesystem(ABC):
         """
         pass
     
+    @abstractmethod
+    def read_file(self, path: str) -> Optional[str]:
+        """
+        Reads the contents of a file.
+
+        Args:
+            path: Path to the file
+
+        Returns:
+            File contents as string, or None if the file does not exist
+        """
+        pass
+
+    @abstractmethod
+    def ensure_directory(self, path: str) -> None:
+        """
+        Ensures a directory exists, creating it and parent directories if necessary.
+
+        Args:
+            path: Directory path to ensure exists
+        """
+        pass
+
     @abstractmethod
     def find_transcoded_video(self, original_video_path: str) -> str:
         """

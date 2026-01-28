@@ -5,7 +5,6 @@ from typing import Optional
 
 from domain.models.hardware import CPUInfo, CPUVendor, HardwareVideoAcceleration, VENDOR_TO_VIDEO_ACCELERATION
 from domain.ports.hardware_info import HardwareInfo
-from infrastructure.logger import Logger
 
 HW_ACCELERATION_DEVICE_PATH = "/dev/dri/renderD128"
 
@@ -14,30 +13,13 @@ class LocalHardwareInfo(HardwareInfo):
     """
     Local hardware information implementation.
     """
-    
+
     def __init__(self):
         """
-        Initializes hardware detection and logs hardware information.
+        Initializes hardware info with lazy detection (no side effects).
         """
         self._cpu_info: Optional[CPUInfo] = None
         self._video_acceleration: Optional[HardwareVideoAcceleration] = None
-        
-        # Log hardware information
-        logger = Logger.get_logger()
-        logger.info("Detecting hardware...")
-        # Access properties to trigger detection
-        _ = self.cpu
-        video_accel = self.video_acceleration
-        
-        # Log warning if DRI device is missing (only once, here in __init__)
-        if self.cpu.vendor in (CPUVendor.INTEL, CPUVendor.AMD):
-            if not Path(HW_ACCELERATION_DEVICE_PATH).exists():
-                logger.warning(f"DRI device not found ({HW_ACCELERATION_DEVICE_PATH})")
-        
-        logger.info("Hardware detected successfully")
-        logger.info(f"  - CPU: {self.cpu}")
-        hw_accel_verbose = video_accel.value if video_accel else 'Disabled'
-        logger.info(f"  - Hardware acceleration: {hw_accel_verbose}")
 
     @property
     def cpu(self) -> CPUInfo:

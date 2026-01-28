@@ -102,6 +102,7 @@ class TestMain:
     @patch('main.VideoRepositorySQL')
     @patch('main.LocalFilesystem')
     @patch('main.LocalHardwareInfo')
+    @patch('main.FFmpegTranscoderFactory')
     @patch('main.ProcessVideosUseCase')
     @patch('main.MainController')
     @patch('main.signal.signal')
@@ -109,11 +110,12 @@ class TestMain:
     @patch('main.time.sleep')
     def test_main_shutdown_during_startup_delay(self, mock_sleep, mock_schedule, mock_signal,
                                                 mock_main_controller, mock_use_case,
+                                                mock_transcoder_factory,
                                                 mock_hardware_info, mock_filesystem,
                                                 mock_repository, mock_db, mock_config):
         """Test main() handles shutdown during startup delay."""
         import main
-        
+
         # Setup mocks
         mock_config_instance = Mock()
         mock_config_instance.paths.media_path = "/test"
@@ -123,28 +125,35 @@ class TestMain:
         mock_config_instance.transcoding.video = Mock()
         mock_config_instance.transcoding.audio = Mock()
         mock_config.load.return_value = mock_config_instance
-        
+
         mock_db_instance = Mock()
         mock_db.return_value = mock_db_instance
-        
+
+        # Mock hardware_info properties for logging in main()
+        mock_hw_instance = Mock()
+        mock_hw_instance.cpu.vendor = Mock()
+        mock_hw_instance.video_acceleration = None
+        mock_hardware_info.return_value = mock_hw_instance
+
         # Set shutdown flag after first sleep
         def side_effect_sleep(seconds):
             main._shutdown_requested = True
         mock_sleep.side_effect = side_effect_sleep
-        
+
         # Reset shutdown flag
         main._shutdown_requested = False
-        
+
         main.main()
-        
+
         # Should have called signal handlers
         assert mock_signal.call_count == 2  # SIGTERM and SIGINT
-    
+
     @patch('main.Config')
     @patch('main.DatabaseConnection')
     @patch('main.VideoRepositorySQL')
     @patch('main.LocalFilesystem')
     @patch('main.LocalHardwareInfo')
+    @patch('main.FFmpegTranscoderFactory')
     @patch('main.ProcessVideosUseCase')
     @patch('main.MainController')
     @patch('main.signal.signal')
@@ -152,11 +161,12 @@ class TestMain:
     @patch('main.time.sleep')
     def test_main_keyboard_interrupt(self, mock_sleep, mock_schedule, mock_signal,
                                      mock_main_controller, mock_use_case,
+                                     mock_transcoder_factory,
                                      mock_hardware_info, mock_filesystem,
                                      mock_repository, mock_db, mock_config):
         """Test main() handles KeyboardInterrupt."""
         import main
-        
+
         # Setup mocks
         mock_config_instance = Mock()
         mock_config_instance.paths.media_path = "/test"
@@ -166,26 +176,33 @@ class TestMain:
         mock_config_instance.transcoding.video = Mock()
         mock_config_instance.transcoding.audio = Mock()
         mock_config.load.return_value = mock_config_instance
-        
+
         mock_db_instance = Mock()
         mock_db.return_value = mock_db_instance
-        
+
+        # Mock hardware_info properties for logging in main()
+        mock_hw_instance = Mock()
+        mock_hw_instance.cpu.vendor = Mock()
+        mock_hw_instance.video_acceleration = None
+        mock_hardware_info.return_value = mock_hw_instance
+
         # Make schedule.run_pending raise KeyboardInterrupt
         mock_schedule.run_pending.side_effect = KeyboardInterrupt()
-        
+
         # Reset shutdown flag
         main._shutdown_requested = False
-        
+
         main.main()
-        
+
         # Should have handled KeyboardInterrupt gracefully
         assert True  # If we get here, exception was handled
-    
+
     @patch('main.Config')
     @patch('main.DatabaseConnection')
     @patch('main.VideoRepositorySQL')
     @patch('main.LocalFilesystem')
     @patch('main.LocalHardwareInfo')
+    @patch('main.FFmpegTranscoderFactory')
     @patch('main.ProcessVideosUseCase')
     @patch('main.MainController')
     @patch('main.signal.signal')
@@ -194,20 +211,21 @@ class TestMain:
     @patch('sys.exit')
     def test_main_exception_handling(self, mock_exit, mock_sleep, mock_schedule, mock_signal,
                                      mock_main_controller, mock_use_case,
+                                     mock_transcoder_factory,
                                      mock_hardware_info, mock_filesystem,
                                      mock_repository, mock_db, mock_config):
         """Test main() handles exceptions and exits."""
         import main
-        
+
         # Setup mocks
         mock_config_instance = Mock()
         mock_config.load.side_effect = Exception("Config error")
-        
+
         # Reset shutdown flag
         main._shutdown_requested = False
-        
+
         main.main()
-        
+
         # Should have called sys.exit(1)
         mock_exit.assert_called_once_with(1)
 

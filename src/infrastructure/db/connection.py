@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from domain.models.app_config import DatabaseConfig
-from infrastructure.logger import Logger
+from domain.ports.logger import AppLogger
 
 Base = declarative_base()
 
@@ -13,14 +13,16 @@ Base = declarative_base()
 class DatabaseConnection:
     """Manages database connection."""
     
-    def __init__(self, db_config: DatabaseConfig):
+    def __init__(self, db_config: DatabaseConfig, logger: AppLogger):
         """
         Initializes database connection.
-        
+
         Args:
             db_config: Database configuration object
+            logger: Application logger
         """
         self.config = db_config
+        self.logger = logger
         self.engine = create_engine(
             f"sqlite:///{db_config.path}",
             connect_args={"check_same_thread": False}
@@ -80,26 +82,25 @@ class DatabaseConnection:
         Raises:
             RuntimeError: If database exists but is missing required tables
         """
-        logger = Logger.get_logger()
-        logger.info("Initializing database connection...")
-        
+        self.logger.info("Initializing database connection...")
+
         # Check if database is empty
         if self.is_empty():
-            logger.info("Database is empty, creating tables...")
+            self.logger.info("Database is empty, creating tables...")
             self.create_tables()
-            logger.info("Tables created successfully")
+            self.logger.info("Tables created successfully")
         else:
-            logger.info("Database exists, verifying tables...")
+            self.logger.info("Database exists, verifying tables...")
             if not self.has_all_tables():
                 error_msg = (
                     "Database exists but is missing required tables. "
                     "Please ensure the database schema is correct or use an empty database."
                 )
-                logger.error(error_msg)
+                self.logger.error(error_msg)
                 raise RuntimeError(error_msg)
-            logger.info("All required tables exist")
-        
+            self.logger.info("All required tables exist")
+
         # Verify connection
         session = self.get_session()
         session.close()
-        logger.info("Database connection established successfully")
+        self.logger.info("Database connection established successfully")

@@ -44,6 +44,8 @@ def mock_filesystem():
     mock.find_videos = Mock(return_value=[])
     mock.file_exists = Mock(return_value=False)
     mock.find_transcoded_video = Mock(return_value="")
+    mock.read_file = Mock(return_value=None)
+    mock.ensure_directory = Mock()
     return mock
 
 
@@ -60,10 +62,30 @@ def mock_hardware_info():
 
 
 @pytest.fixture
+def mock_logger():
+    """Creates a mock AppLogger."""
+    mock = Mock()
+    mock.info = Mock()
+    mock.warning = Mock()
+    mock.error = Mock()
+    mock.title = Mock()
+    mock.subtitle = Mock()
+    return mock
+
+
+@pytest.fixture
 def mock_transcoder():
     """Creates a mock Transcoder."""
     mock = Mock()
     mock.transcode = Mock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_transcoder_factory(mock_transcoder):
+    """Creates a mock TranscoderFactory."""
+    mock = Mock()
+    mock.create = Mock(return_value=mock_transcoder)
     return mock
 
 
