@@ -39,4 +39,4 @@ services:
         echo "Installing test dependencies..."
         pip install -q -r dev/requirements-dev.txt
         echo "Running tests..."
-        python -m pytest tests/ -v --cov=. --cov-report=term-missing
+        python -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=xml:coverage/coverage.xml

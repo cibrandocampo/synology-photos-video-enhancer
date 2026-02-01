@@ -5,7 +5,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/cibrandocampo/synology-photos-video-enhancer)](https://github.com/cibrandocampo/synology-photos-video-enhancer/releases)
 [![Python](https://img.shields.io/badge/python-3.14-blue?logo=python)](https://www.python.org/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/LICENSE)
+[![Codecov](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer/graph/badge.svg)](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer)
 
 ![Grafana Dashboard](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/small_grafana_dashboard.png)
 
