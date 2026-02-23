@@ -56,7 +56,7 @@ Based on `env.example`, create a `.env` file that must be saved on the NAS at th
 | Variable | Default | Description |
 |----------|---------|-------------|
 | **Docker Configuration** |
-| `DOCKER_VERSION` | `stable` | Docker image version. Pre-built images are available on [Docker Hub](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer). Options: `stable` (recommended for production, updated with releases, passes both unit and integration tests), `latest` (most up-to-date version passing unit tests, daily updates from main), or specific version tag (e.g., `v3.0.0`) |
+| `APP_DOCKER_VERSION` | `stable` | Docker image version for the main APP container (`synology-photos-video-enhancer`). Pre-built images are available on [Docker Hub](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer). Options: `stable` (recommended for production, updated with releases, passes both unit and integration tests), `latest` (most up-to-date version passing unit tests, daily updates from main), or specific version tag (e.g., `v3.0.0`) |
 | **Transcoding Resources** |
 | `HW_TRANSCODING` | `True` | Enable hardware transcoding (True/False) |
 | `EXECUTION_THREADS` | `2` | Number of threads for FFmpeg transcoding. **Recommended:** Do not exceed half of available CPU cores (e.g., 4 cores = max 2 threads) |

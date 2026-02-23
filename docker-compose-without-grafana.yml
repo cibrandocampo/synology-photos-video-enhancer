@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   video-enhancer:
-    image: cibrandocampo/synology-photos-video-enhancer:${DOCKER_VERSION:-stable}
+    image: cibrandocampo/synology-photos-video-enhancer:${APP_DOCKER_VERSION:-stable}
     container_name: synology-photos-video-enhancer
     env_file:
       - .env
