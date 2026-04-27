@@ -97,12 +97,8 @@ class LocalHardwareInfo(HardwareInfo):
         """
         Detects the number of CPU cores from CPU information.
         """
-        try:
-            # Try different keys that py-cpuinfo might use
-            cores = raw_cpu_info.get('count', raw_cpu_info.get('cpu_count', raw_cpu_info.get('cores', 1)))
-            return cores if isinstance(cores, int) else 1
-        except Exception:
-            return 1
+        cores = raw_cpu_info.get('count', raw_cpu_info.get('cpu_count', raw_cpu_info.get('cores', 1)))
+        return cores if isinstance(cores, int) else 1
     
     
     def _detect_video_acceleration(self) -> Optional[HardwareVideoAcceleration]:

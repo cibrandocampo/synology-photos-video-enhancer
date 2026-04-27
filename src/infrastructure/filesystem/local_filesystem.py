@@ -45,11 +45,8 @@ class LocalFilesystem(Filesystem):
         """Reads file contents, returns None if file does not exist."""
         if not os.path.isfile(path):
             return None
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
-        except Exception:
-            return None
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
 
     def ensure_directory(self, path: str) -> None:
         """Ensures directory exists, creating parents if needed."""
