@@ -141,12 +141,19 @@ class TestLocalFilesystem:
 
         assert result is None
 
-    def test_read_file_read_error(self, filesystem, temp_dir):
-        """Test read_file returns None when file cannot be read."""
-        # Use a directory path instead of file path to cause an error
+    def test_read_file_returns_none_for_directory(self, filesystem, temp_dir):
+        """Test read_file returns None when path points to a directory (not a file)."""
         result = filesystem.read_file(temp_dir)
 
         assert result is None
+
+    def test_read_file_propagates_unicode_decode_error(self, filesystem, temp_dir):
+        """Test read_file propagates UnicodeDecodeError instead of swallowing it."""
+        binary_file = os.path.join(temp_dir, "binary.bin")
+        Path(binary_file).write_bytes(b"\xff\xfe\xfd\x00\x80")
+
+        with pytest.raises(UnicodeDecodeError):
+            filesystem.read_file(binary_file)
 
     def test_ensure_directory_creates_directory(self, filesystem, temp_dir):
         """Test ensure_directory creates a new directory."""

@@ -67,7 +67,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            PY_IMAGE=python:3.13-slim-bookworm
+            PY_IMAGE=python:3.14-slim-bookworm
       
       - name: Update Docker Hub description
         if: steps.get_tag.outputs.skip != 'true'

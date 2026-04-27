@@ -1,10 +1,9 @@
 # Synology Photos – Intermediate Video Quality Enhancer
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/cibrandocampo/synology-photos-video-enhancer)
-[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-Image-blue?logo=docker)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/cibrandocampo/synology-photos-video-enhancer)](https://github.com/cibrandocampo/synology-photos-video-enhancer/releases)
 [![Python](https://img.shields.io/badge/python-3.14-blue?logo=python)](https://www.python.org/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
+[![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fcibrandocampo%2Fsynology-photos-video-enhancer%2F&query=%24.pull_count&label=docker%20pulls&logo=docker&color=066da5)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
 [![Codecov](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer/graph/badge.svg)](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer)
 
 ![Grafana Dashboard](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/small_grafana_dashboard.png)

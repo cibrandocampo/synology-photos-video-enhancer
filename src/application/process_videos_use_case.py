@@ -266,20 +266,20 @@ class ProcessVideosUseCase:
         video_name = os.path.basename(video_path)
         syno_file = os.path.join(video_dir, '@eaDir', video_name, "SYNOINDEX_MEDIA_INFO")
 
-        content = self.filesystem.read_file(syno_file)
-
-        if content is None:
-            self.logger.warning(f"SYNOINDEX_MEDIA_INFO not found for {video_path}, using placeholder")
-            return Video(
-                path=video_path,
-                video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
-                audio_track=AudioTrack(),
-                container=Container(format="")
-            )
-
         try:
+            content = self.filesystem.read_file(syno_file)
+
+            if content is None:
+                self.logger.warning(f"SYNOINDEX_MEDIA_INFO not found for {video_path}, using placeholder")
+                return Video(
+                    path=video_path,
+                    video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
+                    audio_track=AudioTrack(),
+                    container=Container(format="")
+                )
+
             lines = content.splitlines(keepends=True)
-            
+
             # The main data is in line 2 (index 1)
             if len(lines) < 2:
                 self.logger.warning(f"Invalid SYNOINDEX_MEDIA_INFO format for {video_path}, using placeholder")
@@ -289,13 +289,13 @@ class ProcessVideosUseCase:
                     audio_track=AudioTrack(),
                     container=Container(format="")
                 )
-            
+
             # Parse line 2 into tokens (list of strings)
             tokens = lines[1].strip().split()
-            
+
             # Create Video object from metadata
             return Video.from_synology_metadata(video_path, tokens)
-            
+
         except Exception as e:
             self.logger.warning(f"Error reading SYNOINDEX_MEDIA_INFO for {video_path}: {e}, using placeholder")
             return Video(
