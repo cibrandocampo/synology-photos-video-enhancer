@@ -184,13 +184,100 @@ class TestConfig:
             "LOGGER_NAME": "test-logger",
             "LOGGER_LEVEL": "DEBUG"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             # Force reload by clearing singleton
             Config._instance = None
             Config._app_config = None
             config = Config.load()
             logger = config.logger
-            
+
             assert logger.name == "test-logger"
             assert logger.level == "DEBUG"
+
+
+class TestDashboardConfig:
+    """Tests for the dashboard config loader and its hard-fail validations."""
+
+    @staticmethod
+    def _env(**overrides):
+        env = {
+            "DASHBOARD_PASSWORD": "secret",
+            "DASHBOARD_SECRET_KEY": "key123",
+        }
+        env.update(overrides)
+        return env
+
+    def test_dashboard_defaults_with_required_vars(self):
+        with patch.dict(os.environ, self._env(), clear=True):
+            dashboard = Config.load().dashboard
+
+            assert dashboard.port == 9200
+            assert dashboard.user == "admin"
+            assert dashboard.password == "secret"
+            assert dashboard.secret_key == "key123"
+            assert dashboard.cookie_secure is False
+
+    def test_dashboard_password_missing_raises(self):
+        with patch.dict(os.environ, {"DASHBOARD_SECRET_KEY": "key123"}, clear=True):
+            with pytest.raises(RuntimeError) as exc_info:
+                _ = Config.load().dashboard
+
+            message = str(exc_info.value)
+            assert message.startswith("Dashboard configuration error: ")
+            assert "DASHBOARD_PASSWORD" in message
+
+    def test_dashboard_password_empty_raises(self):
+        env = {"DASHBOARD_PASSWORD": "", "DASHBOARD_SECRET_KEY": "key123"}
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(RuntimeError) as exc_info:
+                _ = Config.load().dashboard
+
+            message = str(exc_info.value)
+            assert message.startswith("Dashboard configuration error: ")
+            assert "DASHBOARD_PASSWORD" in message
+
+    def test_dashboard_secret_key_missing_raises(self):
+        with patch.dict(os.environ, {"DASHBOARD_PASSWORD": "secret"}, clear=True):
+            with pytest.raises(RuntimeError) as exc_info:
+                _ = Config.load().dashboard
+
+            message = str(exc_info.value)
+            assert message.startswith("Dashboard configuration error: ")
+            assert "DASHBOARD_SECRET_KEY" in message
+
+    def test_dashboard_custom_port(self):
+        with patch.dict(os.environ, self._env(DASHBOARD_PORT="9300"), clear=True):
+            assert Config.load().dashboard.port == 9300
+
+    def test_dashboard_custom_user(self):
+        with patch.dict(os.environ, self._env(DASHBOARD_USER="monitor"), clear=True):
+            assert Config.load().dashboard.user == "monitor"
+
+    def test_dashboard_cookie_secure_truthy(self):
+        with patch.dict(os.environ, self._env(DASHBOARD_COOKIE_SECURE="true"), clear=True):
+            assert Config.load().dashboard.cookie_secure is True
+
+    def test_dashboard_port_out_of_range_raises(self):
+        with patch.dict(os.environ, self._env(DASHBOARD_PORT="70000"), clear=True):
+            with pytest.raises(RuntimeError) as exc_info:
+                _ = Config.load().dashboard
+
+            message = str(exc_info.value)
+            assert message.startswith("Dashboard configuration error: ")
+            assert "DASHBOARD_PORT" in message
+
+    def test_log_config_does_not_log_password_or_secret(self):
+        """log_config must mention port/user but never the password or secret."""
+        env = self._env(DASHBOARD_PASSWORD="topsecretpass", DASHBOARD_SECRET_KEY="topsecretkey")
+        with patch.dict(os.environ, env, clear=True):
+            from unittest.mock import Mock as _Mock
+
+            mock_logger = _Mock()
+            Config.load().log_config(mock_logger)
+
+            logged_messages = [str(call.args[0]) for call in mock_logger.info.call_args_list]
+            joined = "\n".join(logged_messages)
+            assert "topsecretpass" not in joined
+            assert "topsecretkey" not in joined
+            assert any("Dashboard:" in line and "port=9200" in line and "user=admin" in line for line in logged_messages)

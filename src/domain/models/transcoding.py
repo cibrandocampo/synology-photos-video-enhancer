@@ -10,8 +10,6 @@ from domain.constants.video import VideoCodec, VideoProfile
 
 if TYPE_CHECKING:
     from domain.models.video import Video
-    from domain.models.app_config import VideoConfig, AudioConfig
-    from domain.models.hardware import HardwareVideoAcceleration
 
 
 class TranscodingStatus(str, Enum):

@@ -1,7 +1,5 @@
 """Tests for video repository SQL implementation."""
 import pytest
-import os
-import tempfile
 from unittest.mock import Mock
 from domain.models.transcoding import Transcoding, TranscodingStatus
 from domain.models.video import Video, VideoTrack, AudioTrack, Container

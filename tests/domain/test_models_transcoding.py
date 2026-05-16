@@ -7,9 +7,7 @@ from domain.models.transcoding import (
     TranscodingStatus
 )
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
-from domain.constants.video import VideoCodec, VideoProfile
-from domain.constants.audio import AudioCodec
-from domain.constants.container import ContainerFormat
+from domain.constants.video import VideoCodec
 
 
 class TestTranscodingConfiguration:

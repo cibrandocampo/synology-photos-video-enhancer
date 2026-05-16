@@ -1,5 +1,4 @@
 """Tests for video resolution constants."""
-import pytest
 from domain.constants.resolution import VideoResolution
 
 

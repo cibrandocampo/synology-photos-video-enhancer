@@ -1,7 +1,7 @@
 """Module for querying FFmpeg codecs and hardware acceleration capabilities."""
 import subprocess
 import shutil
-from typing import List, Optional
+from typing import List
 
 
 def get_available_hw_codecs() -> List[str]:

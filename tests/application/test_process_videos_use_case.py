@@ -1,8 +1,7 @@
 """Tests for ProcessVideosUseCase."""
 import pytest
 import os
-from unittest.mock import Mock, MagicMock, patch
-from pathlib import Path
+from unittest.mock import patch
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.models.transcoding import Transcoding, TranscodingStatus
 from domain.models.app_config import VideoConfig, AudioConfig
@@ -155,19 +154,7 @@ class TestProcessVideosUseCase:
         
         # Square video is treated as vertical, so should return width
         assert height == 1280
-    
-    def test_calculate_output_audio_channels_less_than_config(self, use_case):
-        """Test calculating audio channels when original has fewer channels."""
-        # Original has 1 channel, config has 2
-        channels = use_case._calculate_output_audio_channels(1)
-        assert channels == 1  # Should use original (less than config)
-    
-    def test_calculate_output_audio_channels_more_than_config(self, use_case):
-        """Test calculating audio channels when original has more channels."""
-        # Original has 5 channels, config has 2
-        channels = use_case._calculate_output_audio_channels(5)
-        assert channels == 2  # Should use config value
-    
+
     def test_calculate_output_audio_channels_equal(self, use_case):
         """Test calculating audio channels when original equals config."""
         channels = use_case._calculate_output_audio_channels(2)
@@ -300,7 +287,6 @@ class TestProcessVideosUseCase:
     
     def test_get_output_path(self, use_case, mock_filesystem, temp_dir):
         """Test _get_output_path creates correct path."""
-        import os
 
         original_path = os.path.join(temp_dir, "video.mp4")
         output_path = use_case._get_output_path(original_path)

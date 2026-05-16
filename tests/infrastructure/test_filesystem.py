@@ -1,7 +1,6 @@
 """Tests for local filesystem."""
 import pytest
 import os
-import tempfile
 from pathlib import Path
 from infrastructure.filesystem.local_filesystem import LocalFilesystem
 

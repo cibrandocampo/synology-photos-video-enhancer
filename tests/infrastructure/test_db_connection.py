@@ -1,7 +1,5 @@
 """Tests for database connection."""
-import pytest
 import os
-import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 from domain.models.app_config import DatabaseConfig
@@ -97,32 +95,9 @@ class TestDatabaseConnection:
         conn.initialize()
         
         assert conn.has_all_tables() is True
-    
-    def test_initialize_missing_tables_raises_error(self, temp_db_path):
-        """Test initialize raises RuntimeError when tables are missing."""
-        import sqlite3
-        
-        db_config = DatabaseConfig(path=temp_db_path)
-        
-        # Create database file but without tables (just create empty file)
-        Path(temp_db_path).touch()
-        
-        conn = DatabaseConnection(db_config, Mock())
-        
-        # Should raise RuntimeError because database exists but has no tables
-        # Actually, if database is empty (no tables), it will create them
-        # So we need to create a database with some table but not the required ones
-        # For simplicity, we'll test that empty database creates tables
-        # The error case is harder to test without creating a partial schema
-        conn.initialize()
-        
-        # After initialize, tables should exist
-        assert conn.has_all_tables() is True
-    
+
     def test_initialize_missing_tables_raises_error(self, temp_db_path):
         """Test initialize raises RuntimeError when required tables are missing."""
-        import sqlite3
-        from infrastructure.db.models import TranscodingModel
         
         db_config = DatabaseConfig(path=temp_db_path)
         conn = DatabaseConnection(db_config, Mock())

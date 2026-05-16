@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configuration is loaded **only from environment variables** (`.env` + volume mounts in `docker-compose.yml`). Both `env.example` and `docker-compose.yml` files are provided with detailed information.
+Infrastructure configuration (paths, ports, credentials) is loaded from environment variables (`.env` + volume mounts in `docker-compose.yml`). Transcoding settings (codecs, bitrates, resolution, execution parameters) are configured through the built-in dashboard and stored in the database.
 
 ## 1. Create Directory Structure
 
@@ -9,7 +9,6 @@ Create the main directory for the project (you can choose any location):
 
 Create subdirectories for Docker volumes:
 - **Database volume** (example): `{main_directory}/volumes/database`
-- **Grafana volume** (optional, only if using Grafana, example): `{main_directory}/volumes/grafana`
 
 **Example structure:**
 ```
@@ -17,25 +16,14 @@ Create subdirectories for Docker volumes:
 ├── docker-compose.yml
 ├── .env
 └── volumes/
-    ├── database/
-    └── grafana/  (optional)
+    └── database/
 ```
 
 **Note**: If you have multiple volumes on your Synology NAS, you can use any volume path (e.g., `/volume1/`, `/volume2/`, `/volume3/`, etc.).
 
 ## 2. Create docker-compose.yml
 
-Choose one of the following options:
-
-**Option A: With Grafana monitoring (recommended for monitoring statistics)**
-- Copy the `docker-compose.yml` file and modify it according to your needs
-- This includes both the video enhancer and Grafana services
-- Configure Grafana variables in `.env` if you want to customize the default settings
-
-**Option B: Without Grafana (simpler setup)**
-- Copy the `docker-compose-without-grafana.yml` file and rename it to `docker-compose.yml`
-- This only includes the video enhancer service
-- No Grafana configuration needed
+Copy the `docker-compose.yml` file and modify it according to your needs.
 
 The application needs access to all photo directories. You must mount:
 - **Common photos folder** (shared by all users): `/volume1/photo`
@@ -45,11 +33,20 @@ The application needs access to all photo directories. You must mount:
 - The `docker-compose.yml` file has clear sections indicating what **MUST be modified** and what doesn't need changes
 - **1. Common photos folder:** If you have a shared photos folder, modify the path `/volume1/photo` according to your Synology configuration. If you don't have a common folder, delete this line
 - **2. Individual user folders:** Replace `user1`, `user2`, etc. with your actual Synology usernames. Add or remove lines according to the number of users
-- All other configuration (database, hardware acceleration, Grafana) is handled via the `.env` file
+- All other configuration (database, hardware acceleration) is handled via the `.env` file
 
 ## 3. Create .env File
 
-Based on `env.example`, create a `.env` file that must be saved on the NAS at the same level as `docker-compose.yml`. Modify the necessary variables according to your needs.
+Copy `env.example` to `.env` next to `docker-compose.yml` and adjust values for your installation. Two dashboard variables are **required** before the container will start:
+
+- `DASHBOARD_PASSWORD` — pick any non-empty value.
+- `DASHBOARD_SECRET_KEY` — generate one with:
+
+  ```bash
+  python -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+
+All other variables have sensible defaults (see the table below).
 
 ## Environment Variables
 
@@ -57,29 +54,14 @@ Based on `env.example`, create a `.env` file that must be saved on the NAS at th
 |----------|---------|-------------|
 | **Docker Configuration** |
 | `APP_DOCKER_VERSION` | `stable` | Docker image version for the main APP container (`synology-photos-video-enhancer`). Pre-built images are available on [Docker Hub](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer). Options: `stable` (recommended for production, updated with releases, passes both unit and integration tests), `latest` (most up-to-date version passing unit tests, daily updates from main), or specific version tag (e.g., `v3.0.0`) |
-| **Transcoding Resources** |
-| `HW_TRANSCODING` | `True` | Enable hardware transcoding (True/False) |
-| `EXECUTION_THREADS` | `2` | Number of threads for FFmpeg transcoding. **Recommended:** Do not exceed half of available CPU cores (e.g., 4 cores = max 2 threads) |
-| `STARTUP_DELAY` | `30` | Minutes to wait before first execution after container startup |
-| `EXECUTION_INTERVAL` | `240` | Minutes between periodic executions |
-| **Output Video Settings** |
-| `VIDEO_CODEC` | `h264` | Video codec: `h264`, `hevc`, `mpeg4`, `mpeg2video`, `vp8`, `vp9`, `av1` |
-| `VIDEO_BITRATE` | `2048` | Video bitrate in kbps |
-| `VIDEO_RESOLUTION` | `720p` | Resolution: `144p`, `240p`, `360p`, `480p`, `720p`, `1080p`, `1440p`, `2160p`. If not set, `VIDEO_W` and `VIDEO_H` can be used as fallback |
-| `VIDEO_PROFILE` | `high` | Video profile (codec-specific): H.264: `baseline`, `main`, `high`; HEVC: `main`, `main10`; MPEG2VIDEO: `simple`, `main`, `high`; MPEG4: `simple`, `advanced-simple`. Ignored if codec doesn't support profiles (vp8, vp9, av1). Set to `False` or leave empty if codec doesn't support profiles |
-| **Output Audio Settings** |
-| `AUDIO_CODEC` | `aac` | Audio codec: `aac`, `mp3`, `ac3`, `eac3`, `opus`, `vorbis`, `flac` |
-| `AUDIO_BITRATE` | `128` | Audio bitrate in kbps |
-| `AUDIO_CHANNELS` | `2` | Number of audio channels (1=mono, 2=stereo) |
-| `AUDIO_PROFILE` | `aac_lc` | AAC profile: `aac_lc`, `aac_he`, `aac_he_v2` (only for AAC codec). Ignored if not using AAC. Set to `False` or leave empty if not using AAC |
 | **Database Configuration** |
 | `DATABASE_HOST_PATH` | `./data` | Path on the HOST where the database directory is located. The SQLite database file will be stored in this location. Typically in a `volumes` or `volumes/data/` folder |
-| **Grafana Configuration (Optional)** |
-| `GRAFANA_DOCKER_VERSION` | `12.3` | Grafana Docker image version. **Only needed if using Grafana monitoring** |
-| `GRAFANA_PORT` | `3000` | Port where Grafana web interface will be accessible. **Only needed if using Grafana monitoring** |
-| `GRAFANA_USER` | `admin` | Grafana admin username. **Only needed if using Grafana monitoring** |
-| `GRAFANA_PASSWORD` | `admin` | Grafana admin password. **Only needed if using Grafana monitoring** |
-| `GRAFANA_PERSISTENCE_PATH` | `./grafana-data` | Path on the HOST where Grafana data (dashboards, users, etc.) will be stored. **Only needed if using Grafana monitoring** |
+| **Dashboard Configuration** |
+| `DASHBOARD_PORT` | `9200` | Port where the internal dashboard listens (host and container) |
+| `DASHBOARD_USER` | `admin` | Username for the single dashboard user |
+| `DASHBOARD_PASSWORD` | _(none)_ | Password for the single dashboard user. **Required** — the app refuses to start if this is empty |
+| `DASHBOARD_SECRET_KEY` | _(none)_ | HMAC key for signing the session cookie. **Required** — generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `DASHBOARD_COOKIE_SECURE` | `false` | Set to `true` if the dashboard serves HTTPS directly. Leave `false` when DSM's reverse proxy terminates TLS (the typical Synology setup) |
 | **Logger Configuration** |
 | `LOGGER_NAME` | `video-enhancer` | Logger name (used in log messages) |
 | `LOGGER_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
@@ -89,7 +71,18 @@ Based on `env.example`, create a `.env` file that must be saved on the NAS at th
 
 **Note:**
 - Advanced configuration variables (`MEDIA_APP_PATH`, `DATABASE_APP_PATH`) are typically not needed and should be left at their default values unless you have specific development or debugging requirements.
-- Grafana configuration variables are **optional** and only required if you want to use Grafana for monitoring transcoding statistics. If you don't need monitoring, you can use `docker-compose-without-grafana.yml` instead.
+
+## Dashboard
+
+The container runs an internal HTTP dashboard on `${DASHBOARD_PORT:-9200}`, exposed by `docker-compose.yml`. After `docker compose up -d`, the dashboard is reachable at:
+
+```
+http://<NAS-ip>:${DASHBOARD_PORT:-9200}/
+```
+
+It serves HTML at `/`, JSON at `/api/stats` (same payload), and an unauthenticated `{"status":"ok"}` probe at `/healthz`. The `healthcheck:` block in `docker-compose.yml` already targets `/healthz`, so `docker ps` will report the container as `healthy` once the dashboard is reachable.
+
+For production use, point DSM's reverse proxy at the dashboard port and let it terminate TLS — the dashboard itself does not serve HTTPS.
 
 ## Execution
 
@@ -125,12 +118,3 @@ cd /volume1/docker/video-enhancer
 docker compose up -d
 ```
 
-**Note:** If using `docker-compose.yml` with Grafana, you can start only the video enhancer without Grafana by using:
-```bash
-docker compose up -d video-enhancer
-```
-
-Or start both services (default):
-```bash
-docker compose up -d
-```

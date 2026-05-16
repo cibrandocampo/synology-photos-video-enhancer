@@ -6,13 +6,11 @@
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fcibrandocampo%2Fsynology-photos-video-enhancer%2F&query=%24.pull_count&label=docker%20pulls&logo=docker&color=066da5)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
 [![Codecov](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer/graph/badge.svg)](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer)
 
-![Grafana Dashboard](https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docs/images/small_grafana_dashboard.png)
-
 Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video's codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
 The problem is that Synology Photos generates these intermediate videos with very poor quality, especially when videos are uploaded via the web interface. The transcodes are created using **H.264 baseline profile** and a framerate of only **15 fps**. The result is files that take up more space than necessary, look noticeably bad, and can even cause playback issues. Imagine trying to play your videos on a Chromecast and seeing them stutter because of the 15 fps limitation — it's simply not acceptable.
 
-This tool solves that problem by automatically improving the quality of those intermediate videos. It retranscodes them into more efficient and modern formats (**H.264 High Profile** or **H.265/HEVC**), using hardware acceleration when available. The result is a significant improvement in visual quality while keeping file sizes efficient. Optionally, the transcoding process and its statistics can be monitored using **Grafana dashboards**.
+This tool solves that problem by automatically improving the quality of those intermediate videos. It retranscodes them into more efficient and modern formats (**H.264 High Profile** or **H.265/HEVC**), using hardware acceleration when available. The result is a significant improvement in visual quality while keeping file sizes efficient.
 
 ## TL;DR
 
@@ -47,7 +45,7 @@ For step-by-step instructions and the full environment variables reference, see 
 
 ## How It Works
 
-1. **Periodic Scanning**: The application runs periodically (configurable via `EXECUTION_INTERVAL`)
+1. **Periodic Scanning**: The application runs periodically (configurable from the dashboard)
 2. **Video Detection**: Recursively scans all subdirectories under `/media` for video files
 3. **Metadata Reading**: Reads original video metadata from Synology's `SYNOINDEX_MEDIA_INFO` files
 4. **Transcoding Check**: Verifies if video has already been transcoded
@@ -69,7 +67,41 @@ After each execution, the application logs a summary:
 
 View logs with `docker logs synology-photos-video-enhancer` or via Container Manager in DSM.
 
-For optional Grafana dashboards, see the **[Grafana Setup Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/grafana-setup.md)**.
+## Dashboard
+
+The container ships with a built-in, server-rendered dashboard that runs alongside the scheduler in the same process — no extra container, no JavaScript, no external service.
+
+- **Access**: `http://<NAS-ip>:${DASHBOARD_PORT:-9200}/`. Recommended setup: put it behind DSM's reverse proxy with TLS termination.
+- **What it shows**: total transcodings, counts per status, success rate, codec distribution, resolution distribution, the latest 5 transcodings, and the top 5 errors. HTML tables and CSS bars only.
+
+**Endpoints:**
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET`  | `/` | required | HTML dashboard |
+| `GET`  | `/api/stats` | required | JSON payload (same data as the HTML view) |
+| `GET`  | `/healthz` | none | `{"status":"ok"}` — used by the Docker `healthcheck:` |
+| `GET`  | `/login` | none | Login form |
+| `POST` | `/login` | none | Submit credentials |
+| `GET`  | `/logout` | required | Clear the session and redirect to `/login` |
+
+**Authentication.** Single user. Username is `DASHBOARD_USER` (defaults to `admin`); password is `DASHBOARD_PASSWORD` and is **required** — the app refuses to start if it is unset or empty. The session cookie is HMAC-signed with `DASHBOARD_SECRET_KEY` (also required). Generate the secret with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+For the full list of dashboard env vars (port, cookie flags, etc.) see the **[Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md)**.
+
+## Migration from Grafana
+
+If you were using the previous Grafana setup:
+
+- **Pull the new image** and redeploy.
+- **Edit `.env`** — add `DASHBOARD_USER`, `DASHBOARD_PASSWORD` (required), and `DASHBOARD_SECRET_KEY` (required, generate with the `python -c` command above). Optionally set `DASHBOARD_PORT` and `DASHBOARD_COOKIE_SECURE`. Remove the now-defunct `GRAFANA_*` vars.
+- **Update `docker-compose.yml`** — the new template no longer contains the `grafana` or `grafana-init` services. If you copied the previous compose locally, drop those service blocks yourself.
+- **Optionally delete `./grafana-data`** on the host — leftover state from the old Grafana container; it is no longer used.
+- **Update DSM's reverse proxy** entry: replace the rule that pointed at port `3000` (Grafana) with one pointing at `${DASHBOARD_PORT:-9200}` (internal dashboard).
 
 ## Development
 
@@ -108,8 +140,6 @@ For architecture details, see the [Architecture Documentation](https://github.co
 |----------|-------------|
 | [Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md) | Directory setup, docker-compose, environment variables |
 | [Supported Formats](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/supported-formats.md) | Video/audio codecs, hardware acceleration, resolutions |
-| [Grafana Setup](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/grafana-setup.md) | Optional monitoring dashboards |
-| [Grafana Queries](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/grafana-queries.md) | Ready-to-use SQL queries for dashboards |
 | [SQLite Schema](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/sqlite-schema.md) | Database schema documentation |
 | [Docker Build](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/DOCKER.md) | Multi-architecture Docker build guide |
 | [Architecture](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/src/README.md) | Hexagonal architecture and data flow |
@@ -140,7 +170,6 @@ This project would not be possible without the following open-source projects:
 
 - **[FFmpeg](https://www.ffmpeg.org/)**: The powerful multimedia framework that enables video transcoding with hardware acceleration. Thank you to the FFmpeg team for their incredible work.
 - **[Jellyfin](https://jellyfin.org/)**: Special thanks to the Jellyfin project for providing pre-built FFmpeg binaries with hardware acceleration drivers included. This significantly simplifies Docker image management and ensures reliable hardware acceleration support. Specifically, we use the [jellyfin-ffmpeg](https://github.com/jellyfin/jellyfin-ffmpeg/tree/jellyfin) project.
-- **[Grafana](https://grafana.com/)**: The open-source analytics and monitoring platform that enables optional visualization of transcoding statistics and results. We use Grafana with the [frser-sqlite-datasource](https://github.com/fr-ser/grafana-sqlite-datasource) plugin to connect to the SQLite database.
 - **[Python](https://www.python.org/)**: The programming language that powers this application.
   - **[Pydantic](https://pydantic.dev/)** (>=2.12.0): For data validation and settings management
   - **[SQLAlchemy](https://www.sqlalchemy.org/)** (>=2.0.0): For database operations
@@ -158,4 +187,3 @@ Licensed under the **MIT License**. See [LICENSE](https://github.com/cibrandocam
 
 **Note on Dependencies:**
 - This project uses Jellyfin FFmpeg binaries, which are licensed under LGPL-3.0/GPL-2.0/GPL-3.0 (see [jellyfin-ffmpeg license](https://github.com/jellyfin/jellyfin-ffmpeg)). The FFmpeg binaries are used as external tools and are not modified or statically linked, which is compatible with the MIT license of this project.
-- Grafana (optional monitoring component) is licensed under AGPL-3.0 (see [Grafana license](https://github.com/grafana/grafana/blob/main/LICENSE)). Grafana is used as an external service via Docker and is not modified or statically linked, which is compatible with the MIT license of this project.

@@ -1,11 +1,6 @@
 """Port for video transcoding operations."""
 from abc import ABC, abstractmethod
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from domain.models.video import Video
-
 
 class Transcoder(ABC):
     """Interface for video transcoding operations."""

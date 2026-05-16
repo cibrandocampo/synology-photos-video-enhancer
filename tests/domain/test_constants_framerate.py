@@ -1,6 +1,4 @@
 """Tests for frame rate constants."""
-import pytest
-from fractions import Fraction
 from domain.constants.framerate import FrameRate
 
 

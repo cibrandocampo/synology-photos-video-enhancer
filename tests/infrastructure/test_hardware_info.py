@@ -1,8 +1,6 @@
 """Tests for local hardware info."""
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-from domain.models.hardware import CPUInfo, CPUVendor, HardwareVideoAcceleration
+from unittest.mock import Mock, patch
+from domain.models.hardware import CPUVendor, HardwareVideoAcceleration
 from infrastructure.hardware.local_hardware_info import LocalHardwareInfo
 
 

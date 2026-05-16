@@ -1,5 +1,4 @@
 """Tests for hardware-related constants."""
-import pytest
 from domain.constants.hardware import HardwareBackend, CPUVendor
 from domain.models.hardware import HardwareVideoAcceleration
 

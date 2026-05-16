@@ -1,5 +1,4 @@
 """Tests for FFmpegTranscoderFactory."""
-import pytest
 from unittest.mock import Mock
 from infrastructure.transcoder.ffmpeg_transcoder_factory import FFmpegTranscoderFactory
 from infrastructure.transcoder.ffmpeg_transcoder import FFmpegTranscoder

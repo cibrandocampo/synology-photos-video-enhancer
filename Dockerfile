@@ -40,6 +40,7 @@ COPY --from=python-deps /install/wheels /wheels
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
 WORKDIR /app
+EXPOSE 9200
 COPY ./src /app
 
 ENTRYPOINT ["python", "main.py"]

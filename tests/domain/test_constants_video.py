@@ -1,5 +1,4 @@
 """Tests for video-related constants."""
-import pytest
 from domain.constants.video import VideoCodec, VideoProfile, SWVideoEncoder, HWVideoEncoder
 from domain.constants.hardware import HardwareBackend
 

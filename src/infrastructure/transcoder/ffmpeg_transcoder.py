@@ -1,15 +1,13 @@
 """FFmpeg transcoder implementation."""
 import subprocess
 import shutil
-from typing import List, Optional
+from typing import List
 
 from domain.ports.transcoder import Transcoder
 from domain.ports.hardware_info import HardwareInfo
 
 from domain.models.transcoding import Transcoding
-from domain.constants.video import VideoCodec, SWVideoEncoder
 from domain.constants.hardware import HardwareBackend
-from domain.constants.audio import AudioCodec
 from domain.ports.logger import AppLogger
 
 

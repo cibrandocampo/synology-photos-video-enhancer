@@ -1,5 +1,4 @@
 """Tests for video domain models."""
-import pytest
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.constants.synology import MetadataIndex
 
@@ -101,7 +100,6 @@ class TestVideo:
     
     def test_from_synology_metadata_complete(self):
         """Test creating Video from complete Synology metadata."""
-        from domain.constants.synology import MetadataIndex
         
         # Create metadata list with correct indices according to MetadataIndex
         metadata = [None] * 60  # Create list with enough space
@@ -129,7 +127,6 @@ class TestVideo:
     
     def test_from_synology_metadata_incomplete(self):
         """Test creating Video from incomplete Synology metadata uses defaults."""
-        from domain.constants.synology import MetadataIndex
         
         # Create metadata list with only width
         metadata = [None] * 60
