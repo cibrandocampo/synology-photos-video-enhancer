@@ -1,6 +1,6 @@
 """Application configuration domain model."""
 from typing import Optional
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.constants.resolution import VideoResolution
@@ -101,9 +101,19 @@ class LoggerConfig(BaseModel):
     level: str  # Logger level
 
 
+class DashboardConfig(BaseModel):
+    """Dashboard HTTP server configuration."""
+    port: int = Field(ge=1, le=65535)
+    user: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    secret_key: str = Field(min_length=1)
+    cookie_secure: bool
+
+
 class AppConfig(BaseModel):
     """Domain model for application configuration."""
     paths: Optional[PathsConfig] = None
     transcoding: Optional[TranscodingConfig] = None
     database: Optional[DatabaseConfig] = None
     logger: Optional[LoggerConfig] = None
+    dashboard: Optional[DashboardConfig] = None

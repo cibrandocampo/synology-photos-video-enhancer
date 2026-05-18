@@ -84,21 +84,10 @@ class DatabaseConnection:
         """
         self.logger.info("Initializing database connection...")
 
-        # Check if database is empty
-        if self.is_empty():
-            self.logger.info("Database is empty, creating tables...")
-            self.create_tables()
-            self.logger.info("Tables created successfully")
-        else:
-            self.logger.info("Database exists, verifying tables...")
-            if not self.has_all_tables():
-                error_msg = (
-                    "Database exists but is missing required tables. "
-                    "Please ensure the database schema is correct or use an empty database."
-                )
-                self.logger.error(error_msg)
-                raise RuntimeError(error_msg)
-            self.logger.info("All required tables exist")
+        # create_all is idempotent: creates only the tables that don't exist yet,
+        # so this handles both fresh databases and schema additions seamlessly.
+        self.create_tables()
+        self.logger.info("Database schema up to date")
 
         # Verify connection
         session = self.get_session()

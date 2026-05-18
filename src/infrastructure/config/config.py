@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from pydantic import ValidationError
+
 from domain.models.app_config import (
     AppConfig,
     PathsConfig,
@@ -10,12 +12,22 @@ from domain.models.app_config import (
     VideoConfig,
     AudioConfig,
     DatabaseConfig,
+    DashboardConfig,
     LoggerConfig
 )
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.constants.resolution import VideoResolution
 from domain.constants.audio import AudioCodec
 from infrastructure.utils import to_int
+
+
+_DASHBOARD_FIELD_TO_ENV = {
+    "port": "DASHBOARD_PORT",
+    "user": "DASHBOARD_USER",
+    "password": "DASHBOARD_PASSWORD",
+    "secret_key": "DASHBOARD_SECRET_KEY",
+    "cookie_secure": "DASHBOARD_COOKIE_SECURE",
+}
 
 
 class Config:
@@ -71,6 +83,7 @@ class Config:
         _ = self.transcoding
         _ = self.database
         _ = self.logger
+        _ = self.dashboard
         logger.info("Configuration loaded successfully")
         logger.info(f"  - Media path: {self.paths.media_path}")
         logger.info(f"  - Database path: {self.database.path}")
@@ -88,6 +101,8 @@ class Config:
             f"  - Audio: {self.transcoding.audio.codec.value} "
             f"@ {self.transcoding.audio.bitrate}kbps ({self.transcoding.audio.channels}ch)"
         )
+        # Dashboard credentials are intentionally never logged.
+        logger.info(f"  - Dashboard: port={self.dashboard.port}, user={self.dashboard.user}")
     
     @property
     def paths(self) -> PathsConfig:
@@ -116,8 +131,15 @@ class Config:
         if self._app_config is None or self._app_config.logger is None:
             self._load_logger()
         return self._app_config.logger
-    
-    
+
+    @property
+    def dashboard(self) -> DashboardConfig:
+        """Gets dashboard configuration (lazy loaded)."""
+        if self._app_config is None or self._app_config.dashboard is None:
+            self._load_dashboard()
+        return self._app_config.dashboard
+
+
     def _ensure_app_config(self):
         """Ensures AppConfig instance exists."""
         if self._app_config is None:
@@ -125,7 +147,8 @@ class Config:
                 paths=None,
                 transcoding=None,
                 database=None,
-                logger=None
+                logger=None,
+                dashboard=None
             )
     
     def _load_paths(self):
@@ -247,19 +270,54 @@ class Config:
     def _load_logger(self):
         """Loads logger configuration from environment variables."""
         self._ensure_app_config()
-        
+
         logger_name = os.getenv("LOGGER_NAME", "synology-photos-video-enhancer")
         logger_level = os.getenv("LOGGER_LEVEL", "INFO").upper()
-        
+
         self._app_config.logger = LoggerConfig(
             name=logger_name,
             level=logger_level
         )
-    
+
+    def _load_dashboard(self):
+        """Loads dashboard configuration from environment variables.
+
+        Hard-fails (RuntimeError) if `DASHBOARD_PASSWORD` or
+        `DASHBOARD_SECRET_KEY` are missing/empty, or any value is otherwise
+        invalid (e.g. port out of range). The error message lists the
+        offending environment variable names.
+        """
+        self._ensure_app_config()
+
+        port = to_int(os.getenv("DASHBOARD_PORT"), default=9200)
+        user = os.getenv("DASHBOARD_USER", "admin")
+        password = os.getenv("DASHBOARD_PASSWORD", "")
+        secret_key = os.getenv("DASHBOARD_SECRET_KEY", "")
+        cookie_secure = os.getenv("DASHBOARD_COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
+
+        try:
+            self._app_config.dashboard = DashboardConfig(
+                port=port,
+                user=user,
+                password=password,
+                secret_key=secret_key,
+                cookie_secure=cookie_secure,
+            )
+        except ValidationError as exc:
+            offending = sorted({
+                _DASHBOARD_FIELD_TO_ENV[error["loc"][0]]
+                for error in exc.errors()
+                if error["loc"] and error["loc"][0] in _DASHBOARD_FIELD_TO_ENV
+            })
+            offending_text = ", ".join(offending) if offending else "unknown field"
+            raise RuntimeError(
+                f"Dashboard configuration error: invalid or missing values for: {offending_text}"
+            ) from exc
+
     def load_all(self) -> AppConfig:
         """
         Loads all configuration sections at once.
-        
+
         Returns:
             Complete AppConfig with all sections loaded
         """
@@ -268,5 +326,6 @@ class Config:
         _ = self.transcoding
         _ = self.database
         _ = self.logger
-        
+        _ = self.dashboard
+
         return self._app_config

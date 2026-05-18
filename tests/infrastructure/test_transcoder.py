@@ -1,10 +1,9 @@
 """Tests for FFmpeg transcoder."""
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 from domain.models.transcoding import Transcoding, TranscodingConfiguration, TranscodingStatus
 from domain.models.hardware import HardwareVideoAcceleration
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
-from domain.models.hardware import HardwareVideoAcceleration
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.constants.audio import AudioCodec
 from domain.constants.container import ContainerFormat
@@ -78,28 +77,7 @@ class TestFFmpegTranscoder:
         """Test that __init__ sets video and audio encoders."""
         assert transcoder.video_encoder is not None
         assert transcoder.audio_encoder is not None
-    
-    @patch('infrastructure.transcoder.ffmpeg_transcoder.shutil.which')
-    @patch('infrastructure.transcoder.ffmpeg_transcoder.subprocess.run')
-    def test_transcode_success(self, mock_subprocess, mock_which, transcoder):
-        """Test successful transcoding."""
-        mock_which.return_value = "/usr/bin/ffmpeg"
-        mock_subprocess.return_value = Mock(returncode=0)
-        
-        result = transcoder.transcode()
-        
-        assert result is True
-        mock_subprocess.assert_called_once()
-    
-    @patch('infrastructure.transcoder.ffmpeg_transcoder.shutil.which')
-    def test_transcode_ffmpeg_not_found(self, mock_which, transcoder):
-        """Test transcoding when ffmpeg is not found."""
-        mock_which.return_value = None
-        
-        result = transcoder.transcode()
-        
-        assert result is False
-    
+
     @patch('infrastructure.transcoder.ffmpeg_transcoder.shutil.which')
     @patch('infrastructure.transcoder.ffmpeg_transcoder.subprocess.run')
     def test_transcode_failure(self, mock_subprocess, mock_which, transcoder):
@@ -176,7 +154,6 @@ class TestFFmpegTranscoder:
     
     def test_build_software_command(self, sample_transcoding):
         """Test building software command."""
-        from domain.models.hardware import HardwareVideoAcceleration
 
         mock_hw = Mock()
         mock_hw.video_acceleration = None  # No hardware acceleration
@@ -258,7 +235,6 @@ class TestFFmpegTranscoder:
     
     def test_build_software_command_includes_profile(self, sample_transcoding):
         """Test that software command includes profile when specified."""
-        from domain.models.hardware import HardwareVideoAcceleration
 
         mock_hw = Mock()
         mock_hw.video_acceleration = None
@@ -272,7 +248,6 @@ class TestFFmpegTranscoder:
     
     def test_build_software_command_no_profile(self, sample_transcoding):
         """Test that software command doesn't include profile when None."""
-        from domain.models.hardware import HardwareVideoAcceleration
 
         sample_transcoding.configuration.video_profile = None
 

@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<nav class="navbar">
+  <span class="nav-brand">
+    <img src="/static/logo.svg" alt="" class="brand-logo">
+    Video Enhancer
+  </span>
+  <div class="nav-links">
+    <a href="/" class="nav-link nav-link--active">
+      <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
+      Dashboard
+    </a>
+    <a href="/settings" class="nav-link">
+      <svg class="icon icon-sm"><use href="/static/icons.svg#i-settings"/></svg>
+      Settings
+    </a>
+    <a href="/logout" class="nav-link">
+      <svg class="icon icon-sm"><use href="/static/icons.svg#i-log-out"/></svg>
+      Sign out
+    </a>
+  </div>
+</nav>
+
+<main class="main-content">
+
+  {% set to_transcode = stats.total - stats.status_counts.not_required %}
+
+  <!-- Overview -->
+  <div class="kpis-group">
+    <p class="kpis-group-label">Overview</p>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
+          <span class="kpi-label">Total</span>
+        </div>
+        <span class="kpi-value">{{ stats.total }}</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-minus-circle"/></svg>
+          <span class="kpi-label">Not required</span>
+        </div>
+        <span class="kpi-value">{{ stats.status_counts.not_required }}</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
+          <span class="kpi-label">To transcode</span>
+        </div>
+        <span class="kpi-value">{{ to_transcode }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transcoding breakdown -->
+  <div class="kpis-group">
+    <p class="kpis-group-label">Transcoding breakdown</p>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-check-circle"/></svg>
+          <span class="kpi-label">Completed</span>
+        </div>
+        <span class="kpi-value">{{ stats.status_counts.completed }}</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-x-circle"/></svg>
+          <span class="kpi-label">Failed</span>
+        </div>
+        <span class="kpi-value {% if stats.status_counts.failed > 0 %}c-danger{% endif %}">
+          {{ stats.status_counts.failed }}
+        </span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-clock"/></svg>
+          <span class="kpi-label">Pending</span>
+        </div>
+        <span class="kpi-value">{{ stats.status_counts.pending }}</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
+          <span class="kpi-label">In progress</span>
+        </div>
+        <span class="kpi-value">{{ stats.status_counts.in_progress }}</span>
+      </div>
+      <div class="kpi">
+        <div class="kpi-header">
+          <svg class="icon icon-sm"><use href="/static/icons.svg#i-percent"/></svg>
+          <span class="kpi-label">Success rate</span>
+        </div>
+        <span class="kpi-value {% if stats.success_rate >= 90 %}c-success{% elif stats.success_rate < 70 %}c-danger{% else %}c-warning{% endif %}">
+          {{ "%.1f"|format(stats.success_rate) }}%
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Codec distribution -->
+  <section class="section">
+    <h3 class="section-title">
+      <svg class="icon"><use href="/static/icons.svg#i-sliders-horizontal"/></svg>
+      Codec distribution
+    </h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Codec</th>
+            <th>Count</th>
+            <th class="bar-cell">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in stats.codec_distribution %}
+          <tr>
+            <td>{{ item.codec }}</td>
+            <td>{{ item.count }}</td>
+            <td class="bar-cell">
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (item.count / max_codec_count * 100) | round(0, 'floor') if max_codec_count else 0 }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="table-empty"><td colspan="3">No data yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Resolution distribution -->
+  <section class="section">
+    <h3 class="section-title">
+      <svg class="icon"><use href="/static/icons.svg#i-monitor"/></svg>
+      Resolution distribution
+    </h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Resolution</th>
+            <th>Count</th>
+            <th class="bar-cell">Share</th>
+          </tr>
+        </thead>
+        <tbody id="resolution-tbody">
+          {% for item in stats.resolution_distribution %}
+          <tr{% if loop.index > 5 %} class="resolution-extra"{% endif %}>
+            <td>{{ item.resolution }}</td>
+            <td>{{ item.count }}</td>
+            <td class="bar-cell">
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ [item.count / max_resolution_count * 100, 2] | max | round(0, 'floor') if max_resolution_count else 0 }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="table-empty"><td colspan="3">No data yet</td></tr>
+          {% endfor %}
+          {% if stats.resolution_distribution | length > 5 %}
+          <tr class="tr-show-more" id="resolution-show-more">
+            <td colspan="3">Show {{ stats.resolution_distribution | length - 5 }} more</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Latest transcodings -->
+  <section class="section">
+    <h3 class="section-title">
+      <svg class="icon"><use href="/static/icons.svg#i-list"/></svg>
+      Latest transcodings
+      <span class="section-title-meta">{{ total_transcodings }} total</span>
+    </h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Original</th>
+            <th>Codec</th>
+            <th>Resolution</th>
+          </tr>
+        </thead>
+        <tbody id="transcodings-tbody">
+          {% for item in transcodings %}
+          <tr>
+            <td class="cell-status">
+              {% if item.status == 'completed' %}
+                <svg class="icon icon-sm status-icon--completed"><use href="/static/icons.svg#i-check-circle"/></svg>
+              {% elif item.status == 'failed' %}
+                <svg class="icon icon-sm status-icon--failed"><use href="/static/icons.svg#i-x-circle"/></svg>
+              {% elif item.status == 'in_progress' %}
+                <svg class="icon icon-sm status-icon--in-progress"><use href="/static/icons.svg#i-zap"/></svg>
+              {% elif item.status == 'pending' %}
+                <svg class="icon icon-sm status-icon--pending"><use href="/static/icons.svg#i-clock"/></svg>
+              {% else %}
+                <svg class="icon icon-sm status-icon--muted"><use href="/static/icons.svg#i-minus-circle"/></svg>
+              {% endif %}
+            </td>
+            <td class="cell-path" title="{{ item.original_video_path }}">{{ item.original_video_path }}</td>
+            <td>{{ item.transcoded_video_codec or "—" }}</td>
+            <td>{{ item.transcoded_video_resolution or "—" }}</td>
+          </tr>
+          {% else %}
+          <tr class="table-empty"><td colspan="4">No transcodings yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      <button class="page-btn" data-page="{{ page - 1 }}" {% if page <= 1 %}disabled{% endif %} title="Previous">
+        <svg class="icon"><use href="/static/icons.svg#i-chevron-left"/></svg>
+      </button>
+      <span class="page-info">{{ page }} / {{ total_pages }}</span>
+      <button class="page-btn" data-page="{{ page + 1 }}" {% if page >= total_pages %}disabled{% endif %} title="Next">
+        <svg class="icon"><use href="/static/icons.svg#i-chevron-right"/></svg>
+      </button>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Top errors -->
+  <section class="section">
+    <h3 class="section-title">
+      <svg class="icon"><use href="/static/icons.svg#i-alert-triangle"/></svg>
+      Top errors
+    </h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Error</th>
+            <th>Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in stats.top_errors %}
+          <tr>
+            <td>{{ item.error_summary }}</td>
+            <td>{{ item.count }}</td>
+          </tr>
+          {% else %}
+          <tr class="table-empty"><td colspan="2">No errors — all good!</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+<script src="/static/dashboard.js"></script>
+{% endblock %}

@@ -1,6 +1,6 @@
 """Video-related constants and enums."""
 from enum import Enum
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 from domain.constants.hardware import HardwareBackend
 
 class VideoCodec(str, Enum):

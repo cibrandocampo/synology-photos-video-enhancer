@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block body %}
+<main class="login-wrap">
+  <div class="login-box">
+    <img src="/static/logo.svg" alt="" class="login-logo">
+    <p class="login-tagline">Enhance your Synology videos.</p>
+
+    {% if error %}
+      <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login" class="login-form">
+      <input
+        class="login-input"
+        type="text"
+        name="username"
+        placeholder="Username"
+        autocomplete="username"
+        required
+      >
+      <div class="password-wrap">
+        <input
+          id="password-field"
+          class="login-input"
+          type="password"
+          name="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+        >
+        <button
+          type="button"
+          class="password-toggle"
+          aria-label="Toggle password visibility"
+          onclick="(function(btn){
+            var f=document.getElementById('password-field');
+            var show=f.type==='password';
+            f.type=show?'text':'password';
+            btn.querySelector('.icon-eye').style.display=show?'none':'inline';
+            btn.querySelector('.icon-eye-off').style.display=show?'inline':'none';
+          })(this)"
+        >
+          <svg class="icon icon-eye"><use href="/static/icons.svg#i-eye"/></svg>
+          <svg class="icon icon-eye-off" style="display:none"><use href="/static/icons.svg#i-eye-off"/></svg>
+        </button>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-login">Sign in</button>
+    </form>
+  </div>
+</main>
+{% endblock %}

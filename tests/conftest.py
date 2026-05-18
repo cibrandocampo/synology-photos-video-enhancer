@@ -3,11 +3,10 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 # Add current directory to path for imports (src is already in /app)
 import sys
-from pathlib import Path
 # The src code is mounted at /app, so we need to add it to path
 # But since we're running from /app, imports should work directly
 if str(Path(__file__).parent.parent / "src") not in sys.path:

@@ -1,5 +1,4 @@
 """Tests for infrastructure utilities."""
-import pytest
 from infrastructure.utils import to_int
 
 

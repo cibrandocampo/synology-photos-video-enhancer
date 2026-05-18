@@ -1,6 +1,6 @@
 """Tests for MainController."""
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from application.process_videos_use_case import ProcessVideosUseCase
 from application.process_result import ProcessResult
 from controllers.main_controller import MainController

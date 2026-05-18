@@ -1,7 +1,6 @@
 """Logger configuration."""
 import inspect
 import logging
-from typing import Optional
 
 from domain.ports.logger import AppLogger
 

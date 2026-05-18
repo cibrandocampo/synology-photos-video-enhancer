@@ -5,17 +5,24 @@ import time
 from pathlib import Path
 import schedule
 
+from domain.constants.container import get_video_extensions
+from domain.models.hardware import CPUVendor
+from application.dashboard_stats_use_case import DashboardStatsUseCase
+from application.process_videos_use_case import ProcessVideosUseCase
+from application.settings_use_case import SettingsUseCase
 from infrastructure.config.config import Config
-from infrastructure.logger import Logger
 from infrastructure.db.connection import DatabaseConnection
+from infrastructure.db.settings_repository_sql import SettingsRepositorySQL
+from infrastructure.db.transcoding_stats_repository_sql import TranscodingStatsRepositorySQL
 from infrastructure.db.video_repository_sql import VideoRepositorySQL
 from infrastructure.filesystem.local_filesystem import LocalFilesystem
 from infrastructure.hardware.local_hardware_info import LocalHardwareInfo, HW_ACCELERATION_DEVICE_PATH
+from infrastructure.logger import Logger
 from infrastructure.transcoder.ffmpeg_transcoder_factory import FFmpegTranscoderFactory
-from application.process_videos_use_case import ProcessVideosUseCase
+from infrastructure.web.app import create_app
+from infrastructure.web.server import run_in_thread
+from controllers.dashboard import build_routers
 from controllers.main_controller import MainController
-from domain.constants.container import get_video_extensions
-from domain.models.hardware import CPUVendor
 
 
 # Global flag for graceful shutdown
@@ -86,7 +93,17 @@ def main():
         # Database connection
         db_connection = DatabaseConnection(config.database, logger)
         db_connection.initialize()
-        
+
+        # Dashboard stats repository + use case (read-only, share the same connection)
+        stats_repository = TranscodingStatsRepositorySQL(db_connection)
+        dashboard_use_case = DashboardStatsUseCase(stats_repository)
+
+        # Settings repository + use case
+        settings_repository = SettingsRepositorySQL(db_connection)
+        settings_use_case = SettingsUseCase(settings_repository)
+        settings_use_case.seed_defaults()
+        db_settings = settings_use_case.load()
+
         # Repository
         video_repository = VideoRepositorySQL(db_connection)
         
@@ -118,16 +135,31 @@ def main():
             video_config=config.transcoding.video,
             audio_config=config.transcoding.audio,
             video_input_path=config.paths.media_path,
-            execution_threads=config.transcoding.execution_threads
+            execution_threads=config.transcoding.execution_threads,
+            settings_repository=settings_repository,
         )
         
         # 4. Build controller (reused across all executions)
         controller = MainController(use_case, logger=logger)
         
         logger.info("Infrastructure adapters initialized successfully")
-        
-        startup_delay = config.transcoding.startup_delay
-        execution_interval = config.transcoding.execution_interval
+
+        # 5. Build and start the dashboard before the scheduler loop so it
+        # remains reachable even during the startup-delay window. Reading
+        # `config.dashboard` here is the hard-fail point if DASHBOARD_*
+        # env vars are missing — that error must surface at startup, not later.
+        dashboard_config = config.dashboard
+        dashboard_app = create_app(
+            use_case=dashboard_use_case,
+            settings_use_case=settings_use_case,
+            config=dashboard_config,
+            routers=build_routers(),
+            logger=logger,
+        )
+        run_in_thread(dashboard_app, host="0.0.0.0", port=dashboard_config.port, logger=logger)
+
+        startup_delay = db_settings.startup_delay
+        execution_interval = db_settings.execution_interval
         
         logger.info(f"Waiting {startup_delay} minutes before first execution...")
         

@@ -1,11 +1,13 @@
 """Use case for processing videos."""
 import os
+from typing import Optional
 from domain.models.transcoding import Transcoding, TranscodingConfiguration, TranscodingStatus
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.ports.video_repository import VideoRepository
 from domain.ports.filesystem import Filesystem
 from domain.ports.transcoder_factory import TranscoderFactory
 from domain.ports.logger import AppLogger
+from domain.ports.settings_repository import SettingsRepository
 from domain.constants.container import ContainerFormat
 from domain.constants.framerate import FrameRate
 from application.process_result import ProcessResult
@@ -25,7 +27,8 @@ class ProcessVideosUseCase:
         video_config: VideoConfig,
         audio_config: AudioConfig,
         video_input_path: str,
-        execution_threads: int = 2
+        execution_threads: int = 2,
+        settings_repository: Optional[SettingsRepository] = None,
     ):
         """
         Initializes the use case.
@@ -48,7 +51,8 @@ class ProcessVideosUseCase:
         self.video_input_path = video_input_path
         self.execution_threads = execution_threads
         self.logger = logger
-        
+        self._settings_repository = settings_repository
+
         # Calculate target resolution and codec for validation
         self.target_resolution = max(video_config.width, video_config.height)
         self.target_codec = video_config.codec.value
@@ -61,7 +65,16 @@ class ProcessVideosUseCase:
             ProcessResult: Detailed result of the processing operation
         """
         result = ProcessResult()
-        
+
+        if self._settings_repository is not None:
+            try:
+                settings = self._settings_repository.load()
+                self.video_config = settings.to_video_config()
+                self.audio_config = settings.to_audio_config()
+                self.execution_threads = settings.execution_threads
+            except Exception:
+                pass  # keep env-derived defaults on any error
+
         # Find all videos
         video_paths = self.filesystem.find_videos(self.video_input_path)
         

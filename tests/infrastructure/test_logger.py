@@ -1,7 +1,7 @@
 """Tests for logger."""
 import pytest
 import logging
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 from infrastructure.logger import Logger, EnhancedLogger
 
 

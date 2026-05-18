@@ -1,9 +1,7 @@
 """Tests for application configuration models."""
-import pytest
 from domain.models.app_config import (
     VideoConfig,
     AudioConfig,
-    TranscodingConfig,
     PathsConfig,
     DatabaseConfig,
     LoggerConfig

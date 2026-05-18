@@ -3,9 +3,21 @@ version: '3.8'
 services:
   video-enhancer:
     image: cibrandocampo/synology-photos-video-enhancer:${APP_DOCKER_VERSION:-stable}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: synology-photos-video-enhancer
     env_file:
-      - .env
+      - path: .env
+        required: false
+    ports:
+      - "${DASHBOARD_PORT:-9200}:${DASHBOARD_PORT:-9200}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${DASHBOARD_PORT:-9200}/healthz').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     volumes:
       # ============================================
       # THESE FIELDS MUST BE MODIFIED
@@ -35,32 +47,4 @@ services:
     # Hardware acceleration (VAAPI/QSV for amd64, V4L2M2M for arm64)
     devices:
       - /dev/dri:/dev/dri
-    restart: unless-stopped
-
-  # One-shot init: ensures the Grafana data directory is writable by UID 472
-  # (Grafana's non-root user) so the main service can run unprivileged.
-  grafana-init:
-    image: busybox:1.36
-    container_name: grafana-init
-    user: "0:0"
-    command: ["sh", "-c", "chown -R 472:472 /var/lib/grafana"]
-    volumes:
-      - ${GRAFANA_PERSISTENCE_PATH:-./grafana-data}:/var/lib/grafana
-
-  grafana:
-    image: grafana/grafana:${GRAFANA_DOCKER_VERSION:-12}
-    container_name: grafana
-    depends_on:
-      grafana-init:
-        condition: service_completed_successfully
-    ports:
-      - "${GRAFANA_PORT:-3000}:3000"
-    volumes:
-      - ${GRAFANA_PERSISTENCE_PATH:-./grafana-data}:/var/lib/grafana
-      - ${DATABASE_HOST_PATH:-./data}:/data:ro        # SQLite database (read-only)
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-CHANGEME}
-      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
-      - GF_PATHS_DATA=/var/lib/grafana
     restart: unless-stopped

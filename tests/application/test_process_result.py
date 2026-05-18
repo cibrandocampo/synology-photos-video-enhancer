@@ -1,6 +1,5 @@
 """Tests for process result."""
-import pytest
-from application.process_result import ProcessResult, ProcessStatus
+from application.process_result import ProcessResult
 
 
 class TestProcessResult:

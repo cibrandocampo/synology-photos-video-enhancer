@@ -1,5 +1,4 @@
 """Tests for audio-related constants."""
-import pytest
 from domain.constants.audio import AudioCodec, AACProfile, AudioEncoder
 
 

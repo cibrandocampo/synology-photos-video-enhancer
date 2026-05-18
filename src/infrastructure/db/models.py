@@ -1,5 +1,5 @@
 """SQLAlchemy database models."""
-from sqlalchemy import Column, String, Text, Index
+from sqlalchemy import Boolean, Column, Integer, String, Text, Index
 
 from infrastructure.db.connection import Base
 
@@ -19,3 +19,22 @@ class TranscodingModel(Base):
         Index("idx_original_path", "original_video_path"),
         Index("idx_status", "status"),
     )
+
+
+class SettingsModel(Base):
+    """Single-row table storing transcoding settings configured via the UI."""
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True, default=1)
+    hw_transcoding = Column(Boolean, nullable=False, default=True)
+    execution_threads = Column(Integer, nullable=False, default=2)
+    startup_delay = Column(Integer, nullable=False, default=30)
+    execution_interval = Column(Integer, nullable=False, default=240)
+    video_codec = Column(String(20), nullable=False, default="h264")
+    video_bitrate = Column(Integer, nullable=False, default=2048)
+    video_resolution = Column(String(10), nullable=False, default="720p")
+    video_profile = Column(String(30), nullable=True)
+    audio_codec = Column(String(20), nullable=False, default="aac")
+    audio_bitrate = Column(Integer, nullable=False, default=128)
+    audio_channels = Column(Integer, nullable=False, default=2)
+    audio_profile = Column(String(20), nullable=True)

@@ -1,5 +1,4 @@
 """Tests for container format constants."""
-import pytest
 from domain.constants.container import ContainerFormat, get_video_extensions
 
 

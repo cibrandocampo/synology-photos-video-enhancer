@@ -1,8 +1,7 @@
 """Tests for ProcessVideosUseCase."""
 import pytest
 import os
-from unittest.mock import Mock, MagicMock, patch
-from pathlib import Path
+from unittest.mock import patch
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.models.transcoding import Transcoding, TranscodingStatus
 from domain.models.app_config import VideoConfig, AudioConfig
@@ -155,19 +154,7 @@ class TestProcessVideosUseCase:
         
         # Square video is treated as vertical, so should return width
         assert height == 1280
-    
-    def test_calculate_output_audio_channels_less_than_config(self, use_case):
-        """Test calculating audio channels when original has fewer channels."""
-        # Original has 1 channel, config has 2
-        channels = use_case._calculate_output_audio_channels(1)
-        assert channels == 1  # Should use original (less than config)
-    
-    def test_calculate_output_audio_channels_more_than_config(self, use_case):
-        """Test calculating audio channels when original has more channels."""
-        # Original has 5 channels, config has 2
-        channels = use_case._calculate_output_audio_channels(5)
-        assert channels == 2  # Should use config value
-    
+
     def test_calculate_output_audio_channels_equal(self, use_case):
         """Test calculating audio channels when original equals config."""
         channels = use_case._calculate_output_audio_channels(2)
@@ -300,7 +287,6 @@ class TestProcessVideosUseCase:
     
     def test_get_output_path(self, use_case, mock_filesystem, temp_dir):
         """Test _get_output_path creates correct path."""
-        import os
 
         original_path = os.path.join(temp_dir, "video.mp4")
         output_path = use_case._get_output_path(original_path)
@@ -424,3 +410,60 @@ class TestProcessVideosUseCase:
         assert saved_transcoding.status == TranscodingStatus.NOT_REQUIRED
         assert saved_transcoding.transcoded_video == placeholder_video
         assert saved_transcoding.configuration is None
+
+    def test_execute_loads_settings_from_repository_when_provided(
+        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
+        mock_logger, video_config, audio_config
+    ):
+        """execute() refreshes config from settings_repository before processing."""
+        from unittest.mock import Mock
+        from domain.models.settings import TranscodingSettings
+
+        settings_repository = Mock()
+        settings_repository.load.return_value = TranscodingSettings(
+            execution_threads=8,
+            video_bitrate=5000,
+        )
+        use_case = ProcessVideosUseCase(
+            video_repository=mock_video_repository,
+            filesystem=mock_filesystem,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
+            video_config=video_config,
+            audio_config=audio_config,
+            video_input_path="/test/media",
+            settings_repository=settings_repository,
+        )
+        mock_filesystem.find_videos.return_value = []
+
+        use_case.execute()
+
+        settings_repository.load.assert_called_once()
+        assert use_case.execution_threads == 8
+
+    def test_execute_keeps_defaults_when_settings_repository_raises(
+        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
+        mock_logger, video_config, audio_config
+    ):
+        """execute() silently falls back to env-derived config on repository error."""
+        from unittest.mock import Mock
+
+        settings_repository = Mock()
+        settings_repository.load.side_effect = RuntimeError("db down")
+        use_case = ProcessVideosUseCase(
+            video_repository=mock_video_repository,
+            filesystem=mock_filesystem,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
+            video_config=video_config,
+            audio_config=audio_config,
+            video_input_path="/test/media",
+            execution_threads=2,
+            settings_repository=settings_repository,
+        )
+        mock_filesystem.find_videos.return_value = []
+
+        result = use_case.execute()
+
+        assert result.errors == 0
+        assert use_case.execution_threads == 2

@@ -1,5 +1,4 @@
 """Tests for FFmpeg codecs utilities."""
-import pytest
 from unittest.mock import patch, Mock
 from infrastructure.transcoder.ffmpeg_codecs import (
     get_available_hw_codecs,

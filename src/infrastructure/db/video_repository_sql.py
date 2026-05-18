@@ -114,7 +114,7 @@ class VideoRepositorySQL(VideoRepository):
                 session.commit()
                 session.refresh(model)
                 return self._model_to_domain(model)
-        except IntegrityError as e:
+        except IntegrityError:
             session.rollback()
             raise
         finally:
