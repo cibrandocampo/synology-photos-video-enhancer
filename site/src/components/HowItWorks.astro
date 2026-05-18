@@ -1,0 +1,71 @@
+---
+export interface HowItWorksStep {
+  kind: 'capture' | 'text-only'
+  title: string
+  body: string
+  src?: string
+  alt?: string
+  icon?: string
+}
+
+export interface Props {
+  steps: readonly HowItWorksStep[]
+}
+
+const { steps } = Astro.props
+
+// Resolve screenshot src the same way Screenshot.astro does.
+const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+---
+<div class="space-y-16 sm:space-y-20">
+  {steps.map((step, i) => (
+    <div class={`flex flex-col gap-8 lg:flex-row lg:items-center ${i % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}>
+      <!-- Left / Right: visual -->
+      <div class="flex-1 flex justify-center">
+        {step.kind === 'capture' && step.src ? (
+          <div class="rounded-[28px] border-2 border-slate-800 bg-slate-900/60 p-2 shadow-xl shadow-enhancer-900/30 w-full max-w-sm">
+            <img
+              src={`${base}/${step.src.replace(/^\//, '')}`}
+              alt={step.alt ?? step.title}
+              class="rounded-[20px] w-full h-auto"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        ) : (
+          <div class="flex h-40 w-40 items-center justify-center rounded-full bg-enhancer-900/40 border border-enhancer-700/40 shadow-lg shadow-enhancer-900/30">
+            {step.icon ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="56"
+                height="56"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-enhancer-300"
+                aria-hidden="true"
+                set:html={step.icon}
+              />
+            ) : (
+              <span class="text-4xl font-bold text-enhancer-300">{i + 1}</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <!-- Right / Left: text -->
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-enhancer-500 text-sm font-bold text-white">
+            {i + 1}
+          </span>
+          <h3 class="text-xl font-semibold text-slate-100">{step.title}</h3>
+        </div>
+        <p class="text-slate-400 leading-relaxed">{step.body}</p>
+      </div>
+    </div>
+  ))}
+</div>

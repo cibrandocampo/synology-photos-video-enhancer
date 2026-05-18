@@ -1,0 +1,223 @@
+---
+import Base from '../layouts/Base.astro'
+import Hero from '../components/Hero.astro'
+import FeatureCard from '../components/FeatureCard.astro'
+import HowItWorks from '../components/HowItWorks.astro'
+import Screenshot from '../components/Screenshot.astro'
+import Footer from '../components/Footer.astro'
+import type { HowItWorksStep } from '../components/HowItWorks.astro'
+
+const howItWorksSteps: HowItWorksStep[] = [
+  {
+    kind: 'text-only',
+    title: 'Deploy once',
+    body: 'Copy docker-compose.yml, create .env with your dashboard password, run docker compose up -d. The container starts scanning immediately after the startup delay.',
+    icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
+  },
+  {
+    kind: 'text-only',
+    title: 'Automatic periodic scanning',
+    body: "Every N minutes (configurable, default 4 h) the scanner walks every subdirectory under /media, reads Synology's SYNOINDEX_MEDIA_INFO metadata, and builds a list of videos that need transcoding.",
+    icon: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  },
+  {
+    kind: 'capture',
+    title: 'Hardware-accelerated transcoding',
+    body: 'Videos are transcoded using the best available backend — QSV on Intel, VAAPI on AMD/Intel GPU, V4L2M2M on ARM. No GPU? It falls back to software. Each result is recorded in SQLite so it is never re-processed.',
+    src: 'screenshots/dashboard.png',
+    alt: 'Dashboard showing transcoding stats with completed and failed counts',
+  },
+  {
+    kind: 'capture',
+    title: 'Dashboard shows the full picture',
+    body: 'An authenticated web dashboard runs alongside the scheduler in the same container. It shows totals, success rate, codec and resolution distribution, the latest transcodings, and the top errors.',
+    src: 'screenshots/settings.png',
+    alt: 'Settings page with codec, bitrate, and resolution controls',
+  },
+]
+
+const features = [
+  { icon: 'zap', title: 'Hardware acceleration', body: 'QSV (Intel iGPU), VAAPI (AMD/Intel GPU), V4L2M2M (ARM). Auto-detected at startup. Falls back to software when unavailable.' },
+  { icon: 'layers', title: 'Multi-architecture', body: 'Docker images built for amd64 and arm64. Runs on Synology DS220+ class NAS, Intel NUC, Raspberry Pi, or any Linux host.' },
+  { icon: 'database', title: 'Smart deduplication', body: 'Every transcoding is recorded in SQLite. Already-processed videos are skipped permanently — no re-work on each cycle.' },
+  { icon: 'clock', title: 'Periodic execution', body: 'Runs at a configurable interval (default 4 h). Set startup delay and interval from the dashboard — no container restart needed.' },
+  { icon: 'monitor', title: 'Built-in dashboard', body: 'Authenticated web UI showing totals, success rate, codec and resolution distribution, latest transcodings, and top errors.' },
+  { icon: 'sliders', title: 'Settings at runtime', body: 'Codec, bitrate, resolution, threads, hardware acceleration — all configurable from the dashboard. Changes take effect on the next run.' },
+  { icon: 'shield', title: 'Private by design', body: 'No telemetry, no SaaS, no public registration. Runs entirely in your Docker stack. Your videos never leave your NAS.' },
+  { icon: 'cpu', title: 'Low resource footprint', body: 'Scans only run periodically. Thread count is configurable. Designed to coexist with other containers on a low-power NAS.' },
+] as const
+
+const screenshots = [
+  { src: 'screenshots/login.png', alt: 'Dashboard login form', caption: 'Login' },
+  { src: 'screenshots/dashboard.png', alt: 'Main dashboard with stats and transcoding list', caption: 'Dashboard' },
+  { src: 'screenshots/settings.png', alt: 'Settings page with codec and bitrate controls', caption: 'Settings' },
+]
+
+const faqItems = [
+  {
+    q: 'Does it modify my original videos?',
+    a: 'Never. The tool writes only to @eaDir/[video_name]/SYNOPHOTO_FILM_H.mp4 — the same path Synology Photos itself uses for intermediate files. Original files are read-only.',
+  },
+  {
+    q: 'What hardware do I need?',
+    a: 'Any Synology NAS running DSM 7.1+ with Docker or Container Manager. Intel iGPU unlocks QSV (requires the SynoCli Video Drivers package from SynoCommunity). AMD or Intel GPU with a DRI device unlocks VAAPI. ARM SoCs (DS220+ class) get V4L2M2M for free.',
+  },
+  {
+    q: 'What if I have no GPU or hardware acceleration?',
+    a: 'Set HW_TRANSCODING=False in .env. The tool falls back to software encoding via FFmpeg. Transcoding takes longer but still works on any host.',
+  },
+  {
+    q: 'Can I control the quality — codec, bitrate, resolution?',
+    a: 'Yes. All transcoding parameters (codec, bitrate, resolution, thread count, audio settings) are configurable from the dashboard Settings page at runtime. Changes take effect on the next scheduled run.',
+  },
+  {
+    q: 'Will it re-transcode the same videos every time it runs?',
+    a: 'No. Every processed video is recorded in a local SQLite database with its status. On subsequent runs, already-completed videos are skipped. Only new or failed videos are re-attempted.',
+  },
+  {
+    q: 'Is my data safe?',
+    a: 'The container runs entirely within your Docker stack. No data is sent anywhere — no telemetry, no analytics, no external service calls. The database is a plain SQLite file on your host. MIT licence.',
+  },
+]
+---
+<Base>
+  <Hero />
+
+  <!-- Section 2 — The problem -->
+  <section id="problem" class="mx-auto max-w-4xl px-6 py-16 sm:py-24">
+    <div class="text-center">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Synology Photos quietly makes your videos worse.</h2>
+      <p class="mt-6 text-lg text-slate-300 leading-relaxed">
+        When you upload a video to Synology Photos, it generates an intermediate file for adaptive streaming.
+        The result: H.264 Baseline Profile at 15 fps. Files that stutter on Chromecast, look noticeably
+        degraded compared to the originals, and take more space than a properly-encoded H.265 would.
+      </p>
+      <p class="mt-4 text-lg text-slate-400 leading-relaxed">
+        This tool re-transcodes those intermediate files automatically — H.264 High Profile or H.265/HEVC,
+        hardware-accelerated when available, running on a schedule so every new upload gets fixed without
+        any manual intervention. The original video is never touched.
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 3 — How it works -->
+  <section id="how-it-works" class="mx-auto max-w-6xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">How it works</h2>
+      <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
+        Deploy once and forget it. The container handles everything else automatically.
+      </p>
+    </div>
+    <HowItWorks steps={howItWorksSteps} />
+  </section>
+
+  <!-- Section 4 — Features -->
+  <section id="features" class="mx-auto max-w-6xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Everything you need, nothing you don't</h2>
+      <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
+        No subscription. No cloud. No configuration beyond a single .env file. It runs on your NAS and stays there.
+      </p>
+    </div>
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {features.map((f) => (
+        <FeatureCard title={f.title} body={f.body} icon={f.icon} />
+      ))}
+    </div>
+  </section>
+
+  <!-- Section 5 — Screenshots -->
+  <section id="screenshots" class="mx-auto max-w-6xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">A quick look</h2>
+      <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
+        Login, dashboard stats, and settings — the whole interface in three screens.
+      </p>
+    </div>
+    <div class="flex overflow-x-auto gap-6 pb-6 md:grid md:grid-cols-3 md:overflow-visible md:gap-8">
+      {screenshots.map((s) => (
+        <div class="flex-shrink-0 md:flex-shrink">
+          <Screenshot src={s.src} alt={s.alt} caption={s.caption} />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Section 6 — Self-host -->
+  <section id="self-host" class="mx-auto max-w-4xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Self-host in 5 minutes</h2>
+      <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
+        Three files, two secrets, <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-slate-200">docker compose up</code>. Full walkthrough in the README.
+      </p>
+    </div>
+    <div class="relative rounded-xl border border-slate-800 bg-slate-950/80 p-6 shadow-xl shadow-enhancer-900/20">
+      <button
+        id="copy-install-snippet"
+        type="button"
+        class="absolute top-4 right-4 rounded-md border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-enhancer-400"
+      >
+        Copy
+      </button>
+      <pre class="overflow-x-auto text-sm leading-relaxed text-slate-200"><code id="install-snippet"># 1. Download compose file and env template
+curl -O https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docker-compose.yml
+curl -O https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/env.example
+cp env.example .env
+
+# 2. Edit .env:
+#    - Set DASHBOARD_PASSWORD (required)
+#    - Set DASHBOARD_SECRET_KEY (generate with:
+#      python -c "import secrets; print(secrets.token_urlsafe(32))")
+#    - Point DATABASE_HOST_PATH to a persistent directory
+
+# 3. Start
+docker compose up -d
+
+# Dashboard is at http://&lt;NAS-ip&gt;:9200/</code></pre>
+    </div>
+    <p class="mt-6 text-center text-sm text-slate-400">
+      Full configuration reference:
+      <a class="text-enhancer-300 hover:text-enhancer-100 underline decoration-enhancer-700 underline-offset-4" href="https://github.com/cibrandocampo/synology-photos-video-enhancer#readme">README — Configuration guide</a>
+    </p>
+  </section>
+
+  <!-- Section 7 — FAQ -->
+  <section id="faq" class="mx-auto max-w-4xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Questions people ask</h2>
+    </div>
+    <div class="space-y-4">
+      {faqItems.map((item) => (
+        <details class="group rounded-lg border border-slate-800 bg-slate-900/50 open:bg-slate-900/70">
+          <summary class="cursor-pointer list-none p-5 flex items-center justify-between text-slate-100 font-medium hover:bg-slate-800/40 rounded-lg">
+            <span>{item.q}</span>
+            <span class="ml-4 text-slate-400 group-open:rotate-180 transition-transform" aria-hidden="true">▾</span>
+          </summary>
+          <p class="px-5 pb-5 text-slate-400 leading-relaxed">{item.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+
+  <!-- Section 8 — Footer -->
+  <Footer />
+
+  <script is:inline>
+    (function () {
+      var btn = document.getElementById('copy-install-snippet')
+      var pre = document.getElementById('install-snippet')
+      if (!btn || !pre) return
+      btn.addEventListener('click', function () {
+        var text = (pre.textContent || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        if (!navigator.clipboard) return
+        navigator.clipboard.writeText(text).then(function () {
+          var previous = btn.textContent
+          btn.textContent = 'Copied ✓'
+          setTimeout(function () {
+            btn.textContent = previous || 'Copy'
+          }, 2000)
+        })
+      })
+    })()
+  </script>
+</Base>

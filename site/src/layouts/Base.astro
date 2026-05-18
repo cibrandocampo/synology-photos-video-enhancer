@@ -1,0 +1,38 @@
+---
+import '../styles/global.css'
+
+export interface Props {
+  title?: string
+  description?: string
+}
+
+const {
+  title = 'Synology Photos Video Enhancer — automatic quality improvement',
+  description = 'Automatically re-transcodes Synology Photos intermediate videos from 15 fps H.264 baseline to modern formats with hardware acceleration. Self-hosted, no SaaS, MIT licence.',
+} = Astro.props
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://cibrandocampo.github.io/synology-photos-video-enhancer').toString()
+---
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={`${import.meta.env.BASE_URL}/favicon.ico`} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={`${import.meta.env.BASE_URL}/favicon.ico`} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-enhancer-950 via-slate-950 to-enhancer-900 text-slate-100 antialiased">
+    <slot />
+  </body>
+</html>
