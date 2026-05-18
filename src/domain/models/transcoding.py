@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from domain.constants.audio import AACProfile, AudioCodec
 from domain.constants.container import ContainerFormat
 from domain.constants.video import VideoCodec, VideoProfile
@@ -68,8 +68,7 @@ class Transcoding(BaseModel):
             "updated_at": datetime.now()
         })
     
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 # Rebuild model to resolve forward references

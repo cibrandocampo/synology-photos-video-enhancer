@@ -1,13 +1,5 @@
 """Result model for video processing use case."""
 from dataclasses import dataclass
-from enum import Enum
-
-
-class ProcessStatus(str, Enum):
-    """Status of video processing."""
-    ALREADY_TRANSCODED = "already_transcoded"
-    TRANSCODED = "transcoded"
-    ERROR = "error"
 
 
 @dataclass

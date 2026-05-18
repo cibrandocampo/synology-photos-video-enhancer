@@ -10,6 +10,7 @@ from domain.models.hardware import CPUVendor
 from application.dashboard_stats_use_case import DashboardStatsUseCase
 from application.process_videos_use_case import ProcessVideosUseCase
 from application.settings_use_case import SettingsUseCase
+from domain.models.settings import TranscodingSettings
 from infrastructure.config.config import Config
 from infrastructure.db.connection import DatabaseConnection
 from infrastructure.db.settings_repository_sql import SettingsRepositorySQL
@@ -47,12 +48,9 @@ def _run_processing(controller, logger, execution_interval=None):
         execution_interval: Optional interval in minutes to show waiting message after execution
     """
     try:
-        # Parse CLI arguments
-        args = MainController.parse_args()
-        
         # Execute
         logger.subtitle("Starting video processing...")
-        result = controller.run(args)
+        result = controller.run()
         logger.subtitle("Video processing completed")
         
         # Check if execution was successful
@@ -85,7 +83,6 @@ def main():
     try:
         # 1. Load configuration
         config = Config.load()
-        config.log_config(logger)
         
         # 2. Initialize infrastructure adapters (once, reused across all executions)
         logger.info("Initializing infrastructure adapters...")
@@ -103,6 +100,7 @@ def main():
         settings_use_case = SettingsUseCase(settings_repository)
         settings_use_case.seed_defaults()
         db_settings = settings_use_case.load()
+        config.log_config(logger, db_settings)
 
         # Repository
         video_repository = VideoRepositorySQL(db_connection)
@@ -127,15 +125,16 @@ def main():
         transcoder_factory = FFmpegTranscoderFactory(hardware_info, logger)
 
         # 3. Build use case (reused across all executions)
+        _defaults = TranscodingSettings()
         use_case = ProcessVideosUseCase(
             video_repository=video_repository,
             filesystem=filesystem,
             transcoder_factory=transcoder_factory,
             logger=logger,
-            video_config=config.transcoding.video,
-            audio_config=config.transcoding.audio,
+            video_config=_defaults.to_video_config(),
+            audio_config=_defaults.to_audio_config(),
             video_input_path=config.paths.media_path,
-            execution_threads=config.transcoding.execution_threads,
+            execution_threads=_defaults.execution_threads,
             settings_repository=settings_repository,
         )
         

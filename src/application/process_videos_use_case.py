@@ -52,10 +52,6 @@ class ProcessVideosUseCase:
         self.execution_threads = execution_threads
         self.logger = logger
         self._settings_repository = settings_repository
-
-        # Calculate target resolution and codec for validation
-        self.target_resolution = max(video_config.width, video_config.height)
-        self.target_codec = video_config.codec.value
     
     def execute(self) -> ProcessResult:
         """

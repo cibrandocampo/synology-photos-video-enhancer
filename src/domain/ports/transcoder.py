@@ -16,4 +16,4 @@ class Transcoder(ABC):
         Returns:
             True if transcoding succeeded, False otherwise
         """
-        pass
+        pass  # pragma: no cover

@@ -92,11 +92,7 @@ class Logger:
             console_handler.setFormatter(formatter)
             root_logger.addHandler(console_handler)
             
-            # Set logging level
-            try:
-                level_int = getattr(logging, level.upper(), logging.INFO)
-            except AttributeError:
-                level_int = logging.INFO
+            level_int = getattr(logging, level.upper(), logging.INFO)
             root_logger.setLevel(level_int)
         
         Logger._root_logger_configured = True
@@ -139,16 +135,14 @@ class Logger:
                         module = inspect.getmodule(caller_frame)
                         if module and module.__name__:
                             name = module.__name__
-                        else:
-                            # Fallback: use filename if module not available
+                        else:  # pragma: no cover
                             filename = caller_frame.f_globals.get('__name__', None)
                             if filename:
                                 name = filename
             except Exception:
                 pass
             
-            # If auto-detection failed, use default
-            if not name:
+            if not name:  # pragma: no cover
                 name = default_name
         
         # Use logger name as cache key - each module gets its own EnhancedLogger
@@ -157,11 +151,7 @@ class Logger:
             # Get logger - it will inherit handlers from root
             logger = logging.getLogger(name)
             
-            # Set logging level (inherits from root if not set)
-            try:
-                level_int = getattr(logging, level.upper(), logging.INFO)
-            except AttributeError:
-                level_int = logging.INFO
+            level_int = getattr(logging, level.upper(), logging.INFO)
             logger.setLevel(level_int)
             
             # Cache the EnhancedLogger instance for this name

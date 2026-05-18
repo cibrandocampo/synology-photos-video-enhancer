@@ -46,28 +46,6 @@ class TestMainController:
         assert result.total_processed == 10
         assert result.transcoded == 5
     
-    def test_parse_args_default(self, monkeypatch):
-        """Test parsing arguments with defaults."""
-        import sys
-        # Mock sys.argv to have no arguments (just script name)
-        monkeypatch.setattr(sys, "argv", ["main.py"])
-        args = MainController.parse_args()
-        
-        assert args is not None
-        assert args.dry_run is False
-        assert args.verbose is False
-        assert args.only_new is False
-    
-    def test_parse_args_with_flags(self, monkeypatch):
-        """Test parsing arguments with flags."""
-        import sys
-        monkeypatch.setattr(sys, "argv", ["main.py", "--dry-run", "--verbose", "--only-new"])
-        args = MainController.parse_args()
-        
-        assert args.dry_run is True
-        assert args.verbose is True
-        assert args.only_new is True
-    
     def test_display_results(self, controller, mock_logger):
         """Test that _display_results logs correctly."""
         result = ProcessResult(

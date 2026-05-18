@@ -154,8 +154,33 @@ class TestVideo:
     def test_from_synology_metadata_invalid_types(self):
         """Test creating Video from metadata with invalid types uses defaults."""
         metadata = ["header", None, "invalid", "not_a_number"]
-        
+
         video = Video.from_synology_metadata("/test/video.mp4", metadata)
-        
-        # Should handle invalid types gracefully
+
         assert video.path == "/test/video.mp4"
+
+    def test_from_synology_metadata_non_numeric_int_fields(self):
+        """Test safe_int exception branch: non-numeric value at an integer field index."""
+        from domain.constants.synology import MetadataIndex
+        metadata = [None] * 60
+        metadata[MetadataIndex.WIDTH] = "not_a_number"
+        metadata[MetadataIndex.HEIGHT] = "also_bad"
+        metadata[MetadataIndex.FRAMERATE] = "bad"
+
+        video = Video.from_synology_metadata("/test/video.mp4", metadata)
+
+        assert video.video_track.width == 0
+        assert video.video_track.height == 0
+        assert video.video_track.framerate == 0
+
+    def test_from_synology_metadata_non_numeric_float_fields(self):
+        """Test safe_float exception branch: non-numeric value at a float field index."""
+        from domain.constants.synology import MetadataIndex
+        metadata = [None] * 60
+        metadata[MetadataIndex.VIDEO_BITRATE] = "bad_float"
+        metadata[MetadataIndex.AUDIO_BITRATE] = "also_bad"
+
+        video = Video.from_synology_metadata("/test/video.mp4", metadata)
+
+        assert video.video_track.bitrate == 0.0
+        assert video.audio_track.bitrate == 0.0

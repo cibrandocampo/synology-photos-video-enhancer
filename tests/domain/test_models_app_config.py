@@ -104,11 +104,11 @@ class TestAudioConfig:
         assert config_high.channels == 8  # Clamped to maximum
 
 
-class TestTranscodingConfig:
-    """Tests for TranscodingConfig model."""
-    
-    def test_create_transcoding_config(self):
-        """Test creating a TranscodingConfig."""
+class TestTranscodingConfiguration:
+    """Tests for TranscodingConfiguration model."""
+
+    def test_create_transcoding_configuration(self):
+        """Test creating a TranscodingConfiguration."""
         from domain.models.transcoding import TranscodingConfiguration
         from domain.constants.video import VideoCodec, VideoProfile
         from domain.constants.audio import AudioCodec

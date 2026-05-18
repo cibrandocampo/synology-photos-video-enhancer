@@ -20,12 +20,6 @@ def _stub_config(*, dashboard_port: int = 9201) -> Mock:
     """Returns a Mock posing as `Config.load()`'s return value."""
     config = Mock()
     config.database = Mock()
-    config.transcoding = Mock()
-    config.transcoding.video = Mock()
-    config.transcoding.audio = Mock()
-    config.transcoding.execution_threads = 1
-    config.transcoding.startup_delay = 0
-    config.transcoding.execution_interval = 60
     config.paths = Mock()
     config.paths.media_path = "/test/media"
     config.dashboard = DashboardConfig(

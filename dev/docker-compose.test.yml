@@ -7,19 +7,8 @@ services:
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
-      # Test configuration - minimal required env vars
       - MEDIA_APP_PATH=/test/media
       - DATABASE_APP_PATH=/test/data/test.db
-      - HW_TRANSCODING=False
-      - EXECUTION_THREADS=1
-      - STARTUP_DELAY=0
-      - EXECUTION_INTERVAL=60
-      - VIDEO_CODEC=h264
-      - VIDEO_BITRATE=1024
-      - VIDEO_RESOLUTION=480p
-      - AUDIO_CODEC=aac
-      - AUDIO_BITRATE=64
-      - AUDIO_CHANNELS=1
       - LOGGER_LEVEL=WARNING
     volumes:
       # Mount source code for tests

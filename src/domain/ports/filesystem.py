@@ -17,8 +17,8 @@ class Filesystem(ABC):
         Returns:
             List of full paths to video files
         """
-        pass
-    
+        pass  # pragma: no cover
+
     @abstractmethod
     def file_exists(self, path: str) -> bool:
         """
@@ -30,8 +30,8 @@ class Filesystem(ABC):
         Returns:
             True if file exists, False otherwise
         """
-        pass
-    
+        pass  # pragma: no cover
+
     @abstractmethod
     def read_file(self, path: str) -> Optional[str]:
         """
@@ -43,7 +43,7 @@ class Filesystem(ABC):
         Returns:
             File contents as string, or None if the file does not exist
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def ensure_directory(self, path: str) -> None:
@@ -53,7 +53,7 @@ class Filesystem(ABC):
         Args:
             path: Directory path to ensure exists
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def find_transcoded_video(self, original_video_path: str) -> str:
@@ -69,4 +69,4 @@ class Filesystem(ABC):
         Returns:
             Path to transcoded video if exists, empty string otherwise
         """
-        pass
+        pass  # pragma: no cover

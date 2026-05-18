@@ -1,5 +1,5 @@
 from typing import List, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from domain.constants.synology import MetadataIndex
 from domain.constants.video import VideoCodec
 from domain.constants.audio import AudioCodec
@@ -109,7 +109,7 @@ class Video(BaseModel):
             """Safely gets a value from the list."""
             try:
                 return metadata_list[index] if index < len(metadata_list) else default
-            except (IndexError, TypeError):
+            except (IndexError, TypeError):  # pragma: no cover
                 return default
         
         def safe_int(value: Any, default: int = 0) -> int:
@@ -178,6 +178,5 @@ class Video(BaseModel):
             container=container_info
         )
     
-    class Config:
-        frozen = True  # Immutable to maintain integrity
+    model_config = ConfigDict(frozen=True)
 

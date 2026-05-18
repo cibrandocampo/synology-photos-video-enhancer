@@ -267,12 +267,28 @@ class TestProcessVideosUseCase:
         result = use_case._is_transcoding_valid(transcoding)
         assert result is True
     
-    @pytest.mark.skip(reason="Complex file format - needs real Synology metadata file structure")
-    def test_read_video_metadata_file_exists(self, use_case, temp_dir):
-        """Test _read_video_metadata when file exists."""
-        # This test is complex because it requires exact Synology metadata file format
-        # Skipping for now - can be implemented with a real example file
-        pass
+    def test_read_video_metadata_with_valid_content(self, use_case, mock_filesystem):
+        """Test _read_video_metadata parses valid 2-line Synology metadata."""
+        tokens = ["0"] * 60
+        tokens[39] = "1920"   # WIDTH
+        tokens[40] = "1080"   # HEIGHT
+        tokens[35] = "30"     # FRAMERATE
+        content = "header line\n" + " ".join(tokens) + "\n"
+        mock_filesystem.read_file.return_value = content
+
+        video = use_case._read_video_metadata("/test/video.mp4")
+
+        assert video.video_track.width == 1920
+        assert video.video_track.height == 1080
+
+    def test_read_video_metadata_raises_returns_placeholder(self, use_case, mock_filesystem):
+        """Test _read_video_metadata returns placeholder when read_file raises."""
+        mock_filesystem.read_file.side_effect = OSError("permission denied")
+
+        video = use_case._read_video_metadata("/test/video.mp4")
+
+        assert video.video_track.width == 0
+        assert video.video_track.height == 0
     
     def test_read_video_metadata_file_not_exists(self, use_case, mock_filesystem):
         """Test _read_video_metadata when file doesn't exist."""
@@ -383,6 +399,49 @@ class TestProcessVideosUseCase:
         assert result.transcoded == 0
         assert result.is_success is False
     
+    def test_transcode_video_success(self, use_case, mock_video_repository,
+                                      mock_transcoder_factory, mock_transcoder, sample_video):
+        """Test _transcode_video full path when transcoded metadata exists (success)."""
+        video_path = "/test/media/video.mp4"
+        transcoded_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
+        real_transcoded = Video(
+            path=transcoded_path,
+            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
+            container=Container(format="mp4"),
+        )
+        mock_transcoder.transcode.return_value = True
+
+        with patch.object(use_case, '_get_output_path', return_value=transcoded_path), \
+             patch.object(use_case, '_read_video_metadata', side_effect=[sample_video, real_transcoded]):
+            result = use_case._transcode_video(video_path)
+
+        assert result is True
+        assert mock_video_repository.save.call_count == 2
+        last_saved = mock_video_repository.save.call_args_list[-1][0][0]
+        assert last_saved.status == TranscodingStatus.COMPLETED
+
+    def test_transcode_video_failure(self, use_case, mock_video_repository,
+                                     mock_transcoder_factory, mock_transcoder, sample_video):
+        """Test _transcode_video full path when transcoding fails."""
+        video_path = "/test/media/video.mp4"
+        transcoded_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
+        real_transcoded = Video(
+            path=transcoded_path,
+            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
+            container=Container(format="mp4"),
+        )
+        mock_transcoder.transcode.return_value = False
+
+        with patch.object(use_case, '_get_output_path', return_value=transcoded_path), \
+             patch.object(use_case, '_read_video_metadata', side_effect=[sample_video, real_transcoded]):
+            result = use_case._transcode_video(video_path)
+
+        assert result is False
+        last_saved = mock_video_repository.save.call_args_list[-1][0][0]
+        assert last_saved.status == TranscodingStatus.FAILED
+
     def test_transcode_video_with_placeholder(self, use_case, mock_video_repository, sample_video):
         """Test _transcode_video when transcoded_video is a placeholder (NOT_REQUIRED)."""
         video_path = "/test/media/video.mp4"

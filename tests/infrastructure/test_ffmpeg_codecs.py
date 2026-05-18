@@ -107,6 +107,36 @@ v4l2m2m
     
     @patch('infrastructure.transcoder.ffmpeg_codecs.subprocess.run')
     @patch('infrastructure.transcoder.ffmpeg_codecs.shutil.which')
+    def test_handles_non_zero_returncode(self, mock_which, mock_subprocess):
+        """Test returns empty list when ffmpeg returns non-zero exit code."""
+        mock_which.return_value = "/usr/bin/ffmpeg"
+        mock_result = Mock()
+        mock_result.returncode = 1
+        mock_subprocess.return_value = mock_result
+
+        assert get_available_hwaccels() == []
+
+    @patch('infrastructure.transcoder.ffmpeg_codecs.subprocess.run')
+    @patch('infrastructure.transcoder.ffmpeg_codecs.shutil.which')
+    def test_handles_file_not_found(self, mock_which, mock_subprocess):
+        """Test returns empty list when ffmpeg binary is not found at runtime."""
+        mock_which.return_value = "/usr/bin/ffmpeg"
+        mock_subprocess.side_effect = FileNotFoundError()
+
+        assert get_available_hwaccels() == []
+
+    @patch('infrastructure.transcoder.ffmpeg_codecs.subprocess.run')
+    @patch('infrastructure.transcoder.ffmpeg_codecs.shutil.which')
+    def test_handles_timeout(self, mock_which, mock_subprocess):
+        """Test returns empty list when ffmpeg times out."""
+        import subprocess
+        mock_which.return_value = "/usr/bin/ffmpeg"
+        mock_subprocess.side_effect = subprocess.TimeoutExpired("ffmpeg", 5)
+
+        assert get_available_hwaccels() == []
+
+    @patch('infrastructure.transcoder.ffmpeg_codecs.subprocess.run')
+    @patch('infrastructure.transcoder.ffmpeg_codecs.shutil.which')
     def test_filters_header_line(self, mock_which, mock_subprocess):
         """Test filters out header line."""
         mock_which.return_value = "/usr/bin/ffmpeg"

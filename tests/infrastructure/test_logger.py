@@ -123,6 +123,30 @@ class TestEnhancedLogger:
         # Should still return a logger (using default or detected name)
         assert isinstance(logger, EnhancedLogger)
     
+    def test_configure_root_logger_with_no_handlers(self):
+        """_configure_root_logger adds a handler and sets level when root has none."""
+        import logging
+        root_logger = logging.getLogger()
+        original_handlers = root_logger.handlers[:]
+        original_level = root_logger.level
+
+        for h in root_logger.handlers[:]:
+            root_logger.removeHandler(h)
+        Logger._root_logger_configured = False
+
+        try:
+            Logger._configure_root_logger("DEBUG")
+            assert Logger._root_logger_configured is True
+            assert any(isinstance(h, logging.StreamHandler) for h in root_logger.handlers)
+            assert root_logger.level == logging.DEBUG
+        finally:
+            for h in root_logger.handlers[:]:
+                root_logger.removeHandler(h)
+            for h in original_handlers:
+                root_logger.addHandler(h)
+            root_logger.setLevel(original_level)
+            Logger._root_logger_configured = False
+
     def test_configure_root_logger_idempotent(self):
         """Test _configure_root_logger is idempotent."""
         # Reset the flag

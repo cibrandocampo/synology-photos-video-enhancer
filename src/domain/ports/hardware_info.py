@@ -27,8 +27,8 @@ class HardwareInfo(ABC):
             - arch: CPU architecture
             - cores: Number of CPU cores
         """
-        pass
-    
+        pass  # pragma: no cover
+
     @property
     @abstractmethod
     def video_acceleration(self) -> Optional["HardwareVideoAcceleration"]:
@@ -43,4 +43,4 @@ class HardwareInfo(ABC):
             HardwareVideoAcceleration enum value (QSV, VAAPI, or V4L2M2M) 
             or None if not available (unknown vendor or missing DRI device for Intel/AMD)
         """
-        pass
+        pass  # pragma: no cover
