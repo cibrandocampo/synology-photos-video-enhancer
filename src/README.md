@@ -51,12 +51,10 @@ src/
 
 ### `controllers/main_controller.py` - Main Controller
 
-**Responsibility**: Parse CLI arguments and launch use case
+**Responsibility**: Entry-point orchestration — launch the use case
 
-- Parses command-line arguments (`--dry-run`, `--verbose`, `--only-new`)
-- Validates input format
 - Launches the use case
-- Displays output
+- Returns the result
 
 **The controller does NOT**:
 - List directories
@@ -240,17 +238,9 @@ Each module has one clear responsibility:
 python main.py
 ```
 
-### CLI Options
-
-```bash
-python main.py --dry-run      # Show what would be done
-python main.py --verbose      # Enable verbose output
-python main.py --only-new      # Only process new videos
-```
-
 ## Configuration
 
-Configuration is loaded **only from environment variables**. See `env.example` in the root directory for all available variables.
+Infrastructure settings are loaded from environment variables. See `env.example` in the root directory for the full reference.
 
 ### Main Environment Variables
 
@@ -258,29 +248,15 @@ Configuration is loaded **only from environment variables**. See `env.example` i
 - `MEDIA_APP_PATH` - Path inside container where media is mounted (default: `/media`)
 - `DATABASE_APP_PATH` - Path inside container where database is stored (default: `data/transcodings.db`)
 
-**Transcoding Resources:**
-- `HW_TRANSCODING` - Enable hardware transcoding (True/False, default: True)
-- `EXECUTION_THREADS` - Number of threads for FFmpeg (default: 2)
+**Scheduling:**
 - `STARTUP_DELAY` - Minutes to wait before first execution (default: 30)
 - `EXECUTION_INTERVAL` - Minutes between periodic executions (default: 240)
-
-**Video Settings:**
-- `VIDEO_CODEC` - Video codec: h264, hevc, mpeg4, etc. (default: h264)
-- `VIDEO_BITRATE` - Video bitrate in kbps (default: 2048)
-- `VIDEO_RESOLUTION` - Resolution: 144p, 240p, 360p, 480p, 720p, 1080p, etc. (default: 720p)
-- `VIDEO_PROFILE` - Video profile (codec-specific, optional)
-
-**Audio Settings:**
-- `AUDIO_CODEC` - Audio codec: aac, mp3, ac3, etc. (default: aac)
-- `AUDIO_BITRATE` - Audio bitrate in kbps (default: 128)
-- `AUDIO_CHANNELS` - Number of audio channels: 1 or 2 (default: 1)
-- `AUDIO_PROFILE` - Audio profile (only for AAC, optional)
 
 **Logger:**
 - `LOGGER_NAME` - Logger name (default: synology-photos-video-enhancer)
 - `LOGGER_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
 
-For a complete list of all environment variables and their descriptions, see `env.example` in the root directory.
+**Transcoding settings** (codec, bitrate, resolution, threads, hardware acceleration, etc.) are stored in the SQLite database and managed at runtime via the built-in dashboard. They are not read from environment variables.
 
 ## Adding New Features
 

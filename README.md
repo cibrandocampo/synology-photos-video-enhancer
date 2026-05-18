@@ -38,7 +38,7 @@ This tool automatically re-transcodes them to modern formats with hardware accel
 
 1. **Create directory structure** on your NAS (e.g. `/volume1/docker/photo/photo-video-enhancer/`)
 2. **Copy `docker-compose.yml`** and edit volume mounts to point to your photo directories
-3. **Create `.env`** from `env.example` and adjust settings (codec, resolution, bitrate, etc.)
+3. **Create `.env`** from `env.example` and set the required dashboard credentials (`DASHBOARD_PASSWORD`, `DASHBOARD_SECRET_KEY`). Transcoding settings (codec, resolution, bitrate, etc.) are configured via the dashboard at runtime.
 4. **Deploy** via Synology Container Manager or `docker compose up -d`
 
 For step-by-step instructions and the full environment variables reference, see the **[Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md)**.
@@ -118,7 +118,7 @@ For detailed development instructions, see the [Development Guide](https://githu
 ```
 src/
 ├── application/          # Application logic (use cases)
-├── controllers/         # Controllers (CLI interface)
+├── controllers/         # Controllers (entry-point orchestration)
 ├── domain/              # Domain models and business logic
 │   ├── constants/      # Enums and constants
 │   ├── models/         # Domain models

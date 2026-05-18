@@ -125,7 +125,4 @@ Common fixtures are defined in `conftest.py`:
 
 ## Coverage Goals
 
-- Domain layer: 100% coverage (pure business logic)
-- Application layer: >90% coverage (use cases)
-- Infrastructure layer: >80% coverage (adapters)
-- Controllers: >80% coverage
+- All layers: ≥95% coverage (enforced — no file may fall below this floor)
