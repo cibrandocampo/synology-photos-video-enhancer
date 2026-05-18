@@ -8,12 +8,12 @@ class TranscodingStatsRepository(ABC):
     """Interface for read-only aggregation queries used by the dashboard."""
 
     @abstractmethod
-    def fetch_stats(self) -> DashboardStats:
+    def fetch_stats(self) -> DashboardStats:  # pragma: no cover
         """Returns a fully populated `DashboardStats` payload."""
         pass
 
     @abstractmethod
-    def fetch_latest_transcodings(
+    def fetch_latest_transcodings(  # pragma: no cover
         self, page: int, page_size: int = 5
     ) -> tuple[list[LatestTranscoding], int]:
         """

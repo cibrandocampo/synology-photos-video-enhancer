@@ -93,10 +93,23 @@ class TestVideoRepositorySQL:
         assert found.status == TranscodingStatus.FAILED
         assert found.error_message == "Test error"
     
-    @pytest.mark.skip(reason="Complex IntegrityError mocking with SQLAlchemy - requires real database interaction")
-    def test_save_handles_integrity_error(self, repository, sample_transcoding):
-        """Test that save handles IntegrityError."""
-        # This test is complex because IntegrityError requires actual database constraints
-        # Skipping for now - can be tested with integration tests
-        pass
+    def test_save_raises_integrity_error_and_rolls_back(self, sample_transcoding):
+        """Test that IntegrityError triggers rollback and propagates."""
+        from unittest.mock import MagicMock
+        from sqlalchemy.exc import IntegrityError
+
+        mock_session = MagicMock()
+        mock_session.query.return_value.filter_by.return_value.first.return_value = None
+        mock_session.commit.side_effect = IntegrityError("duplicate", {}, None)
+
+        mock_db = MagicMock()
+        mock_db.get_session.return_value = mock_session
+
+        repo = VideoRepositorySQL(mock_db)
+
+        with pytest.raises(IntegrityError):
+            repo.save(sample_transcoding)
+
+        mock_session.rollback.assert_called_once()
+        mock_session.close.assert_called_once()
 

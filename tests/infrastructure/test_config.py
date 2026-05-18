@@ -267,6 +267,31 @@ class TestDashboardConfig:
             assert message.startswith("Dashboard configuration error: ")
             assert "DASHBOARD_PORT" in message
 
+    def test_dashboard_validation_error_unknown_field_raises_generic_message(self):
+        """Covers the else branch of offending_text when no field maps to an env var name."""
+        from unittest.mock import patch as _patch
+        from pydantic import ValidationError as _ValidationError
+        from pydantic import BaseModel
+
+        class _Dummy(BaseModel):
+            x: int
+
+        try:
+            _Dummy(x="bad")
+        except _ValidationError as exc:
+            fake_exc = exc
+
+        with patch.dict(os.environ, self._env(), clear=True):
+            with _patch("infrastructure.config.config._DASHBOARD_FIELD_TO_ENV", {}):
+                with _patch(
+                    "infrastructure.config.config.DashboardConfig",
+                    side_effect=fake_exc,
+                ):
+                    with pytest.raises(RuntimeError) as exc_info:
+                        _ = Config.load().dashboard
+
+        assert "unknown field" in str(exc_info.value)
+
     def test_log_config_does_not_log_password_or_secret(self):
         """log_config must mention port/user but never the password or secret."""
         env = self._env(DASHBOARD_PASSWORD="topsecretpass", DASHBOARD_SECRET_KEY="topsecretkey")
