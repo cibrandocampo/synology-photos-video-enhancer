@@ -410,3 +410,60 @@ class TestProcessVideosUseCase:
         assert saved_transcoding.status == TranscodingStatus.NOT_REQUIRED
         assert saved_transcoding.transcoded_video == placeholder_video
         assert saved_transcoding.configuration is None
+
+    def test_execute_loads_settings_from_repository_when_provided(
+        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
+        mock_logger, video_config, audio_config
+    ):
+        """execute() refreshes config from settings_repository before processing."""
+        from unittest.mock import Mock
+        from domain.models.settings import TranscodingSettings
+
+        settings_repository = Mock()
+        settings_repository.load.return_value = TranscodingSettings(
+            execution_threads=8,
+            video_bitrate=5000,
+        )
+        use_case = ProcessVideosUseCase(
+            video_repository=mock_video_repository,
+            filesystem=mock_filesystem,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
+            video_config=video_config,
+            audio_config=audio_config,
+            video_input_path="/test/media",
+            settings_repository=settings_repository,
+        )
+        mock_filesystem.find_videos.return_value = []
+
+        use_case.execute()
+
+        settings_repository.load.assert_called_once()
+        assert use_case.execution_threads == 8
+
+    def test_execute_keeps_defaults_when_settings_repository_raises(
+        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
+        mock_logger, video_config, audio_config
+    ):
+        """execute() silently falls back to env-derived config on repository error."""
+        from unittest.mock import Mock
+
+        settings_repository = Mock()
+        settings_repository.load.side_effect = RuntimeError("db down")
+        use_case = ProcessVideosUseCase(
+            video_repository=mock_video_repository,
+            filesystem=mock_filesystem,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
+            video_config=video_config,
+            audio_config=audio_config,
+            video_input_path="/test/media",
+            execution_threads=2,
+            settings_repository=settings_repository,
+        )
+        mock_filesystem.find_videos.return_value = []
+
+        result = use_case.execute()
+
+        assert result.errors == 0
+        assert use_case.execution_threads == 2

@@ -233,3 +233,52 @@ class TestTranscodingStatsRepositorySQL:
         assert len(stats.top_errors) == 1
         assert len(stats.top_errors[0].error_summary) == 100
         assert stats.top_errors[0].error_summary == "x" * 100
+
+
+class TestFetchLatestTranscodings:
+    def test_empty_database_returns_empty_list_and_zero_total(self, repository):
+        transcodings, total = repository.fetch_latest_transcodings(page=1)
+
+        assert transcodings == []
+        assert total == 0
+
+    def test_returns_rows_ordered_by_insertion_desc(self, db_connection, repository):
+        rows = [_row(original=f"/m/video_{i}.mp4") for i in range(3)]
+        _seed(db_connection, rows)
+
+        transcodings, total = repository.fetch_latest_transcodings(page=1, page_size=10)
+
+        assert total == 3
+        assert len(transcodings) == 3
+        paths = [t.original_video_path for t in transcodings]
+        assert paths == ["/m/video_2.mp4", "/m/video_1.mp4", "/m/video_0.mp4"]
+
+    def test_excludes_not_required_rows(self, db_connection, repository):
+        _seed(
+            db_connection,
+            [
+                _row(original="/m/completed.mp4", status=TranscodingStatus.COMPLETED.value),
+                _row(original="/m/not_req.mp4", status=TranscodingStatus.NOT_REQUIRED.value),
+                _row(original="/m/failed.mp4", status=TranscodingStatus.FAILED.value, error_message="x"),
+            ],
+        )
+
+        transcodings, total = repository.fetch_latest_transcodings(page=1, page_size=10)
+
+        paths = {t.original_video_path for t in transcodings}
+        assert "/m/not_req.mp4" not in paths
+        assert total == 2
+
+    def test_pagination_returns_correct_page(self, db_connection, repository):
+        rows = [_row(original=f"/m/v{i}.mp4") for i in range(6)]
+        _seed(db_connection, rows)
+
+        page1, total = repository.fetch_latest_transcodings(page=1, page_size=3)
+        page2, _ = repository.fetch_latest_transcodings(page=2, page_size=3)
+
+        assert total == 6
+        assert len(page1) == 3
+        assert len(page2) == 3
+        assert {t.original_video_path for t in page1}.isdisjoint(
+            {t.original_video_path for t in page2}
+        )

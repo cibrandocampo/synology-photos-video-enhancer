@@ -165,3 +165,34 @@ class TestHealthz:
 
         assert response.status_code == 200
         use_case.execute.assert_not_called()
+
+
+class TestTranscodingsJson:
+    def test_anonymous_returns_401(self, client):
+        response = client.get("/api/transcodings")
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "Authentication required"}
+
+    def test_authenticated_returns_pagination_payload(self, client):
+        _login(client)
+        response = client.get("/api/transcodings")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert "transcodings" in payload
+        assert "page" in payload
+        assert "total_pages" in payload
+        assert "total" in payload
+
+    def test_page_clamped_to_total_pages(self):
+        app, use_case = _build_app()
+        use_case.execute_latest_transcodings.return_value = ([], 0)
+        local_client = TestClient(app)
+        _login(local_client)
+
+        response = local_client.get("/api/transcodings?page=999")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["page"] == 1

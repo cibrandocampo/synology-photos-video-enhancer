@@ -112,3 +112,21 @@ class TestDashboardStatsUseCase:
             use_case.execute()
 
         assert exc_info.value is original
+
+
+class TestExecuteLatestTranscodings:
+    def test_delegates_to_repository_with_correct_args(self):
+        stub = _StubStatsRepository(_sample_stats())
+        use_case = DashboardStatsUseCase(stub)
+
+        result, total = use_case.execute_latest_transcodings(page=2, page_size=10)
+
+        assert result == []
+        assert total == 0
+
+    def test_propagates_repository_error(self):
+        error = RuntimeError("db failure")
+        use_case = DashboardStatsUseCase(_ExplodingStatsRepository(error))
+
+        with pytest.raises(RuntimeError):
+            use_case.execute_latest_transcodings(page=1)
