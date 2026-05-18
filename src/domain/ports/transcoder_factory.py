@@ -21,4 +21,4 @@ class TranscoderFactory(ABC):
         Returns:
             A configured Transcoder instance
         """
-        pass
+        pass  # pragma: no cover

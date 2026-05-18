@@ -3,18 +3,6 @@ from enum import Enum
 from typing import Optional
 
 
-class AudioEncoder(Enum):
-    """Audio encoders for FFmpeg."""
-    AAC = "libfdk_aac"
-    MP3 = "libmp3lame"
-    AC3 = "ac3"
-    EAC3 = "eac3"
-    PCM_S16LE = "pcm_s16le"
-    OPUS = "libopus"
-    VORBIS = "libvorbis"
-    FLAC = "flac"
-
-
 class AudioCodec(str, Enum):
     """Supported audio codecs."""
     AAC = "aac"

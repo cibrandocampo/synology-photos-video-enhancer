@@ -21,3 +21,14 @@ class TestToInt:
         """Test to_int returns 0 when no default provided."""
         assert to_int("invalid") == 0
         assert to_int(None) == 0
+
+    def test_to_int_with_int_input(self):
+        """Test to_int returns the value directly when already an int."""
+        assert to_int(42) == 42
+        assert to_int(0) == 0
+        assert to_int(-7) == -7
+
+    def test_to_int_bool_is_not_int(self):
+        """Test to_int treats bool as non-int and falls through to default."""
+        assert to_int(True, default=99) == 99
+        assert to_int(False, default=99) == 99

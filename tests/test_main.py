@@ -22,13 +22,11 @@ class TestSignalHandler:
 class TestRunProcessing:
     """Tests for _run_processing function."""
     
-    @patch('main.MainController.parse_args')
-    def test_run_processing_success(self, mock_parse_args):
+    def test_run_processing_success(self):
         """Test _run_processing with successful execution."""
         import main
         from application.process_result import ProcessResult
-        
-        mock_parse_args.return_value = Mock()
+
         mock_controller = Mock()
         # ProcessResult is a dataclass, create it properly
         result = ProcessResult(
@@ -47,13 +45,11 @@ class TestRunProcessing:
         # Should call info for success (errors == 0)
         mock_logger.info.assert_called()
     
-    @patch('main.MainController.parse_args')
-    def test_run_processing_failure(self, mock_parse_args):
+    def test_run_processing_failure(self):
         """Test _run_processing with failed execution."""
         import main
         from application.process_result import ProcessResult
-        
-        mock_parse_args.return_value = Mock()
+
         mock_controller = Mock()
         # ProcessResult with errors
         result = ProcessResult(
@@ -71,12 +67,10 @@ class TestRunProcessing:
         # Should call warning when errors > 0
         mock_logger.warning.assert_called()
     
-    @patch('main.MainController.parse_args')
-    def test_run_processing_exception(self, mock_parse_args):
+    def test_run_processing_exception(self):
         """Test _run_processing handles exceptions."""
         import main
-        
-        mock_parse_args.return_value = Mock()
+
         mock_controller = Mock()
         mock_controller.run.side_effect = Exception("Test error")
         mock_logger = Mock()

@@ -1,6 +1,4 @@
 """Main controller for application entry point."""
-import argparse
-
 from application.process_videos_use_case import ProcessVideosUseCase
 from application.process_result import ProcessResult
 from domain.ports.logger import AppLogger
@@ -20,13 +18,10 @@ class MainController:
         self.use_case = use_case
         self.logger = logger
     
-    def run(self, args: argparse.Namespace = None) -> ProcessResult:
+    def run(self) -> ProcessResult:
         """
         Runs the main controller.
-        
-        Args:
-            args: Parsed command-line arguments (optional)
-            
+
         Returns:
             ProcessResult: Detailed result of the processing operation
         """
@@ -54,31 +49,3 @@ class MainController:
         else:
             self.logger.info(f"  - Errors: {result.errors}")
     
-    @staticmethod
-    def parse_args() -> argparse.Namespace:
-        """
-        Parses command-line arguments.
-        
-        Returns:
-            Parsed arguments
-        """
-        parser = argparse.ArgumentParser(
-            description="Synology Photos Video Enhancer"
-        )
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Show what would be done without actually doing it"
-        )
-        parser.add_argument(
-            "--verbose",
-            "-v",
-            action="store_true",
-            help="Enable verbose output"
-        )
-        parser.add_argument(
-            "--only-new",
-            action="store_true",
-            help="Only process videos that haven't been transcoded"
-        )
-        return parser.parse_args()

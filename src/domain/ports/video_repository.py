@@ -22,8 +22,8 @@ class VideoRepository(ABC):
         Returns:
             Transcoding if found, None otherwise
         """
-        pass
-    
+        pass  # pragma: no cover
+
     @abstractmethod
     def exists_by_original_path(self, original_path: str) -> bool:
         """
@@ -35,8 +35,8 @@ class VideoRepository(ABC):
         Returns:
             True if exists, False otherwise
         """
-        pass
-    
+        pass  # pragma: no cover
+
     @abstractmethod
     def save(self, transcoding: "Transcoding") -> "Transcoding":
         """
@@ -48,4 +48,4 @@ class VideoRepository(ABC):
         Returns:
             Saved transcoding
         """
-        pass
+        pass  # pragma: no cover

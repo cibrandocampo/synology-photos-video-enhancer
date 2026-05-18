@@ -1,5 +1,5 @@
 """Tests for audio-related constants."""
-from domain.constants.audio import AudioCodec, AACProfile, AudioEncoder
+from domain.constants.audio import AudioCodec, AACProfile
 
 
 class TestAudioCodec:
@@ -42,13 +42,3 @@ class TestAACProfile:
         """Test creating AACProfile from invalid string returns None."""
         assert AACProfile.from_str("invalid") is None
         assert AACProfile.from_str("") is None
-
-
-class TestAudioEncoder:
-    """Tests for AudioEncoder enum."""
-    
-    def test_encoder_values(self):
-        """Test that encoder values are correct."""
-        assert AudioEncoder.AAC.value == "libfdk_aac"
-        assert AudioEncoder.MP3.value == "libmp3lame"
-        assert AudioEncoder.OPUS.value == "libopus"

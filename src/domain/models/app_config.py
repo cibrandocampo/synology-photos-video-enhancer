@@ -80,16 +80,6 @@ class AudioConfig(BaseModel):
         return max(1, min(8, v))
 
 
-class TranscodingConfig(BaseModel):
-    """Transcoding configuration."""
-    hw_transcoding: bool  # Enable hardware transcoding
-    execution_threads: int  # Number of execution threads
-    startup_delay: int  # Delay in minutes before first execution after container startup
-    execution_interval: int  # Interval in minutes between executions
-    video: VideoConfig  # Video configuration
-    audio: AudioConfig  # Audio configuration
-
-
 class DatabaseConfig(BaseModel):
     """Database configuration."""
     path: str  # Path to database file
@@ -113,7 +103,6 @@ class DashboardConfig(BaseModel):
 class AppConfig(BaseModel):
     """Domain model for application configuration."""
     paths: Optional[PathsConfig] = None
-    transcoding: Optional[TranscodingConfig] = None
     database: Optional[DatabaseConfig] = None
     logger: Optional[LoggerConfig] = None
     dashboard: Optional[DashboardConfig] = None
