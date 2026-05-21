@@ -17,11 +17,11 @@ from infrastructure.utils import to_int
 
 
 _DASHBOARD_FIELD_TO_ENV = {
-    "port": "DASHBOARD_PORT",
-    "user": "DASHBOARD_USER",
-    "password": "DASHBOARD_PASSWORD",
-    "secret_key": "DASHBOARD_SECRET_KEY",
-    "cookie_secure": "DASHBOARD_COOKIE_SECURE",
+    "port": "WEB_PORT",
+    "user": "WEB_USER",
+    "password": "WEB_PASSWORD",
+    "secret_key": "WEB_SECRET_KEY",
+    "cookie_secure": "WEB_COOKIE_SECURE",
 }
 
 
@@ -140,14 +140,14 @@ class Config:
         )
 
     def _load_dashboard(self):
-        """Hard-fails if DASHBOARD_PASSWORD or DASHBOARD_SECRET_KEY are missing/empty."""
+        """Hard-fails if WEB_PASSWORD or WEB_SECRET_KEY are missing/empty."""
         self._ensure_app_config()
 
-        port = to_int(os.getenv("DASHBOARD_PORT"), default=9200)
-        user = os.getenv("DASHBOARD_USER", "admin")
-        password = os.getenv("DASHBOARD_PASSWORD", "")
-        secret_key = os.getenv("DASHBOARD_SECRET_KEY", "")
-        cookie_secure = os.getenv("DASHBOARD_COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
+        port = to_int(os.getenv("WEB_PORT"), default=9200)
+        user = os.getenv("WEB_USER", "admin")
+        password = os.getenv("WEB_PASSWORD", "")
+        secret_key = os.getenv("WEB_SECRET_KEY", "")
+        cookie_secure = os.getenv("WEB_COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
 
         try:
             self._app_config.dashboard = DashboardConfig(

@@ -17,7 +17,7 @@ services:
       # Mount source code for live development (changes reflect immediately)
       - ../src:/app
     ports:
-      - "${DASHBOARD_PORT:-9200}:${DASHBOARD_PORT:-9200}"
+      - "${WEB_PORT:-9200}:${WEB_PORT:-9200}"
     # Enable hardware acceleration (VAAPI/QSV) if available
     devices:
       - /dev/dri:/dev/dri

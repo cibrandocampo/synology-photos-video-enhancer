@@ -77,8 +77,8 @@ class TestDashboardConfig:
     @staticmethod
     def _env(**overrides):
         env = {
-            "DASHBOARD_PASSWORD": "secret",
-            "DASHBOARD_SECRET_KEY": "key123",
+            "WEB_PASSWORD": "secret",
+            "WEB_SECRET_KEY": "key123",
         }
         env.update(overrides)
         return env
@@ -94,53 +94,53 @@ class TestDashboardConfig:
             assert dashboard.cookie_secure is False
 
     def test_dashboard_password_missing_raises(self):
-        with patch.dict(os.environ, {"DASHBOARD_SECRET_KEY": "key123"}, clear=True):
+        with patch.dict(os.environ, {"WEB_SECRET_KEY": "key123"}, clear=True):
             with pytest.raises(RuntimeError) as exc_info:
                 _ = Config.load().dashboard
 
             message = str(exc_info.value)
             assert message.startswith("Dashboard configuration error: ")
-            assert "DASHBOARD_PASSWORD" in message
+            assert "WEB_PASSWORD" in message
 
     def test_dashboard_password_empty_raises(self):
-        env = {"DASHBOARD_PASSWORD": "", "DASHBOARD_SECRET_KEY": "key123"}
+        env = {"WEB_PASSWORD": "", "WEB_SECRET_KEY": "key123"}
         with patch.dict(os.environ, env, clear=True):
             with pytest.raises(RuntimeError) as exc_info:
                 _ = Config.load().dashboard
 
             message = str(exc_info.value)
             assert message.startswith("Dashboard configuration error: ")
-            assert "DASHBOARD_PASSWORD" in message
+            assert "WEB_PASSWORD" in message
 
     def test_dashboard_secret_key_missing_raises(self):
-        with patch.dict(os.environ, {"DASHBOARD_PASSWORD": "secret"}, clear=True):
+        with patch.dict(os.environ, {"WEB_PASSWORD": "secret"}, clear=True):
             with pytest.raises(RuntimeError) as exc_info:
                 _ = Config.load().dashboard
 
             message = str(exc_info.value)
             assert message.startswith("Dashboard configuration error: ")
-            assert "DASHBOARD_SECRET_KEY" in message
+            assert "WEB_SECRET_KEY" in message
 
     def test_dashboard_custom_port(self):
-        with patch.dict(os.environ, self._env(DASHBOARD_PORT="9300"), clear=True):
+        with patch.dict(os.environ, self._env(WEB_PORT="9300"), clear=True):
             assert Config.load().dashboard.port == 9300
 
     def test_dashboard_custom_user(self):
-        with patch.dict(os.environ, self._env(DASHBOARD_USER="monitor"), clear=True):
+        with patch.dict(os.environ, self._env(WEB_USER="monitor"), clear=True):
             assert Config.load().dashboard.user == "monitor"
 
     def test_dashboard_cookie_secure_truthy(self):
-        with patch.dict(os.environ, self._env(DASHBOARD_COOKIE_SECURE="true"), clear=True):
+        with patch.dict(os.environ, self._env(WEB_COOKIE_SECURE="true"), clear=True):
             assert Config.load().dashboard.cookie_secure is True
 
     def test_dashboard_port_out_of_range_raises(self):
-        with patch.dict(os.environ, self._env(DASHBOARD_PORT="70000"), clear=True):
+        with patch.dict(os.environ, self._env(WEB_PORT="70000"), clear=True):
             with pytest.raises(RuntimeError) as exc_info:
                 _ = Config.load().dashboard
 
             message = str(exc_info.value)
             assert message.startswith("Dashboard configuration error: ")
-            assert "DASHBOARD_PORT" in message
+            assert "WEB_PORT" in message
 
     def test_dashboard_validation_error_unknown_field_raises_generic_message(self):
         """Covers the else branch of offending_text when no field maps to an env var name."""
@@ -169,7 +169,7 @@ class TestDashboardConfig:
 
     def test_log_config_does_not_log_password_or_secret(self):
         """log_config must mention port/user but never the password or secret."""
-        env = self._env(DASHBOARD_PASSWORD="topsecretpass", DASHBOARD_SECRET_KEY="topsecretkey")
+        env = self._env(WEB_PASSWORD="topsecretpass", WEB_SECRET_KEY="topsecretkey")
         with patch.dict(os.environ, env, clear=True):
             mock_logger = Mock()
             Config.load().log_config(mock_logger, TranscodingSettings())

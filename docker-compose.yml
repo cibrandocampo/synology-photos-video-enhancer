@@ -11,9 +11,9 @@ services:
       - path: .env
         required: false
     ports:
-      - "${DASHBOARD_PORT:-9200}:${DASHBOARD_PORT:-9200}"
+      - "${WEB_PORT:-9200}:${WEB_PORT:-9200}"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${DASHBOARD_PORT:-9200}/healthz').read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${WEB_PORT:-9200}/healthz').read()"]
       interval: 30s
       timeout: 5s
       retries: 3
