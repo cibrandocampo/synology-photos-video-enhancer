@@ -569,7 +569,7 @@ tbody tr:hover {
    ======================================== */
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: 1.25rem;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
@@ -580,6 +580,12 @@ tbody tr:hover {
 
 .settings-grid--3col {
   grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 600px) {
+  .settings-grid--3col {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field {
@@ -885,5 +891,26 @@ tbody tr:hover {
   .compat-table .col-cpu,
   .compat-table .col-quality {
     display: none;
+  }
+
+  /* Allow wide tables to scroll horizontally instead of clipping */
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  /* Force fixed layout so columns respect declared widths, then shrink codec column */
+  .compat-table {
+    table-layout: fixed;
+  }
+
+  .compat-table .col-codec {
+    width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .compat-table .col-platform,
+  .compat-table .col-efficiency {
+    width: 48px;
   }
 }
