@@ -25,16 +25,12 @@
 </p>
 
 <p align="center">
-  <a href="https://cibrandocampo.github.io/synology-photos-video-enhancer/"><strong>See the project site →</strong></a>
+  <a href="https://video-enhancer.cibran.es"><strong>See the project site →</strong></a>
   <br/>
   <sub>How it works, features, screenshots, codec reference and setup guide</sub>
 </p>
 
 ---
-
-<p align="center">
-  <a href="https://video-enhancer.cibran.es"><strong>See the project site →</strong></a>
-</p>
 
 Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video's codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
