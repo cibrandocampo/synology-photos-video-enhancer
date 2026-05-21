@@ -1,11 +1,11 @@
-const CACHE = 'video-enhancer-v1';
+const CACHE = 'video-enhancer-v2';
 const STATIC = [
   '/static/style.css',
   '/static/icons.svg',
   '/static/logo.svg',
-  '/static/icon-192.png',
-  '/static/icon-512.png',
-  '/static/manifest.json',
+  '/static/icons/manifest.json',
+  '/static/icons/pwa-192x192.png',
+  '/static/icons/pwa-512x512.png',
 ];
 
 self.addEventListener('install', e => {
