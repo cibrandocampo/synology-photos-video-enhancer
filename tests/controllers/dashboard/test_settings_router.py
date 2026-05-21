@@ -1,4 +1,5 @@
 """Integration tests for the settings router (GET form + POST save)."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -6,8 +7,10 @@ from fastapi.testclient import TestClient
 
 from controllers.dashboard import build_routers
 from domain.models.app_config import DashboardConfig
+from domain.models.hardware import HardwareVideoAcceleration
 from domain.models.settings import TranscodingSettings
 from infrastructure.web.app import create_app
+from infrastructure.web.i18n import Translations
 
 
 def _dashboard_config():
@@ -24,13 +27,21 @@ def _default_settings():
     return TranscodingSettings()
 
 
-def _build_app(settings=None):
+def _build_app(settings=None, hw_acceleration=None, translations=None):
     settings_use_case = Mock()
-    settings_use_case.load.return_value = settings if settings is not None else _default_settings()
+    settings_use_case.load.return_value = (
+        settings if settings is not None else _default_settings()
+    )
     settings_use_case.save = Mock()
+    hardware_info = Mock()
+    hardware_info.video_acceleration = hw_acceleration
+    if translations is None:
+        translations = Mock()
     app = create_app(
         use_case=Mock(),
         settings_use_case=settings_use_case,
+        hardware_info=hardware_info,
+        translations=translations,
         config=_dashboard_config(),
         routers=build_routers(),
         logger=Mock(),
@@ -72,6 +83,40 @@ class TestSettingsGet:
         response = client.get("/settings?saved=1")
 
         assert response.status_code == 200
+
+    def test_settings_get_includes_hw_detected_in_context_when_hw_present(self):
+        app, _ = _build_app(
+            hw_acceleration=HardwareVideoAcceleration.VAAPI,
+            translations=Translations(),
+        )
+        client = TestClient(app)
+        _login(client)
+
+        response = client.get("/settings")
+
+        assert response.status_code == 200
+        assert "VAAPI" in response.text
+
+    def test_settings_get_includes_hw_detected_none_when_no_hw(self):
+        app, _ = _build_app(hw_acceleration=None, translations=Translations())
+        client = TestClient(app)
+        _login(client)
+
+        response = client.get("/settings")
+
+        assert response.status_code == 200
+        assert "No compatible hardware" in response.text
+
+    def test_settings_get_renders_es_locale(self):
+        real_translations = Translations()
+        app, _ = _build_app(translations=real_translations)
+        client = TestClient(app)
+        _login(client)
+
+        response = client.get("/settings", headers={"accept-language": "es"})
+
+        assert response.status_code == 200
+        assert "Ejecución" in response.text
 
 
 class TestSettingsPost:

@@ -11,15 +11,15 @@
   <div class="nav-links">
     <a href="/" class="nav-link nav-link--active">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
-      Dashboard
+      {{ t('nav.dashboard') }}
     </a>
     <a href="/settings" class="nav-link">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-settings"/></svg>
-      Settings
+      {{ t('nav.settings') }}
     </a>
     <a href="/logout" class="nav-link">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-log-out"/></svg>
-      Sign out
+      {{ t('nav.sign_out') }}
     </a>
   </div>
 </nav>
@@ -30,26 +30,26 @@
 
   <!-- Overview -->
   <div class="kpis-group">
-    <p class="kpis-group-label">Overview</p>
+    <p class="kpis-group-label">{{ t('dashboard.overview') }}</p>
     <div class="kpis">
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
-          <span class="kpi-label">Total</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.total') }}</span>
         </div>
         <span class="kpi-value">{{ stats.total }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-minus-circle"/></svg>
-          <span class="kpi-label">Not required</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.not_required') }}</span>
         </div>
         <span class="kpi-value">{{ stats.status_counts.not_required }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
-          <span class="kpi-label">To transcode</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.to_transcode') }}</span>
         </div>
         <span class="kpi-value">{{ to_transcode }}</span>
       </div>
@@ -58,19 +58,19 @@
 
   <!-- Transcoding breakdown -->
   <div class="kpis-group">
-    <p class="kpis-group-label">Transcoding breakdown</p>
+    <p class="kpis-group-label">{{ t('dashboard.breakdown') }}</p>
     <div class="kpis">
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-check-circle"/></svg>
-          <span class="kpi-label">Completed</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.completed') }}</span>
         </div>
         <span class="kpi-value">{{ stats.status_counts.completed }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-x-circle"/></svg>
-          <span class="kpi-label">Failed</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.failed') }}</span>
         </div>
         <span class="kpi-value {% if stats.status_counts.failed > 0 %}c-danger{% endif %}">
           {{ stats.status_counts.failed }}
@@ -79,21 +79,21 @@
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-clock"/></svg>
-          <span class="kpi-label">Pending</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.pending') }}</span>
         </div>
         <span class="kpi-value">{{ stats.status_counts.pending }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
-          <span class="kpi-label">In progress</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.in_progress') }}</span>
         </div>
         <span class="kpi-value">{{ stats.status_counts.in_progress }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-percent"/></svg>
-          <span class="kpi-label">Success rate</span>
+          <span class="kpi-label">{{ t('dashboard.kpi.success_rate') }}</span>
         </div>
         <span class="kpi-value {% if stats.success_rate >= 90 %}c-success{% elif stats.success_rate < 70 %}c-danger{% else %}c-warning{% endif %}">
           {{ "%.1f"|format(stats.success_rate) }}%
@@ -106,15 +106,15 @@
   <section class="section">
     <h3 class="section-title">
       <svg class="icon"><use href="/static/icons.svg#i-sliders-horizontal"/></svg>
-      Codec distribution
+      {{ t('dashboard.codec_distribution') }}
     </h3>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Codec</th>
-            <th>Count</th>
-            <th class="bar-cell">Share</th>
+            <th>{{ t('dashboard.table.codec') }}</th>
+            <th>{{ t('dashboard.table.count') }}</th>
+            <th class="bar-cell">{{ t('dashboard.table.share') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -129,7 +129,7 @@
             </td>
           </tr>
           {% else %}
-          <tr class="table-empty"><td colspan="3">No data yet</td></tr>
+          <tr class="table-empty"><td colspan="3">{{ t('dashboard.table.no_data') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -140,15 +140,15 @@
   <section class="section">
     <h3 class="section-title">
       <svg class="icon"><use href="/static/icons.svg#i-monitor"/></svg>
-      Resolution distribution
+      {{ t('dashboard.resolution_distribution') }}
     </h3>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Resolution</th>
-            <th>Count</th>
-            <th class="bar-cell">Share</th>
+            <th>{{ t('dashboard.table.resolution') }}</th>
+            <th>{{ t('dashboard.table.count') }}</th>
+            <th class="bar-cell">{{ t('dashboard.table.share') }}</th>
           </tr>
         </thead>
         <tbody id="resolution-tbody">
@@ -163,11 +163,11 @@
             </td>
           </tr>
           {% else %}
-          <tr class="table-empty"><td colspan="3">No data yet</td></tr>
+          <tr class="table-empty"><td colspan="3">{{ t('dashboard.table.no_data') }}</td></tr>
           {% endfor %}
           {% if stats.resolution_distribution | length > 5 %}
           <tr class="tr-show-more" id="resolution-show-more">
-            <td colspan="3">Show {{ stats.resolution_distribution | length - 5 }} more</td>
+            <td colspan="3">{{ t('dashboard.table.show_more', count=(stats.resolution_distribution | length - 5)) }}</td>
           </tr>
           {% endif %}
         </tbody>
@@ -179,20 +179,20 @@
   <section class="section">
     <h3 class="section-title">
       <svg class="icon"><use href="/static/icons.svg#i-list"/></svg>
-      Latest transcodings
-      <span class="section-title-meta">{{ total_transcodings }} total</span>
+      {{ t('dashboard.latest_transcodings') }}
+      <span class="section-title-meta">{{ total_transcodings }} {{ t('dashboard.total_suffix') }}</span>
     </h3>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th></th>
-            <th>Original</th>
-            <th>Codec</th>
-            <th>Resolution</th>
+            <th>{{ t('dashboard.table.original') }}</th>
+            <th>{{ t('dashboard.table.codec') }}</th>
+            <th>{{ t('dashboard.table.resolution') }}</th>
           </tr>
         </thead>
-        <tbody id="transcodings-tbody">
+        <tbody id="transcodings-tbody" data-empty-message="{{ t('dashboard.table.no_transcodings') }}">
           {% for item in transcodings %}
           <tr>
             <td class="cell-status">
@@ -213,18 +213,18 @@
             <td>{{ item.transcoded_video_resolution or "—" }}</td>
           </tr>
           {% else %}
-          <tr class="table-empty"><td colspan="4">No transcodings yet</td></tr>
+          <tr class="table-empty"><td colspan="4">{{ t('dashboard.table.no_transcodings') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% if total_pages > 1 %}
     <div class="pagination">
-      <button class="page-btn" data-page="{{ page - 1 }}" {% if page <= 1 %}disabled{% endif %} title="Previous">
+      <button class="page-btn" data-page="{{ page - 1 }}" {% if page <= 1 %}disabled{% endif %} title="{{ t('dashboard.pagination.previous') }}">
         <svg class="icon"><use href="/static/icons.svg#i-chevron-left"/></svg>
       </button>
       <span class="page-info">{{ page }} / {{ total_pages }}</span>
-      <button class="page-btn" data-page="{{ page + 1 }}" {% if page >= total_pages %}disabled{% endif %} title="Next">
+      <button class="page-btn" data-page="{{ page + 1 }}" {% if page >= total_pages %}disabled{% endif %} title="{{ t('dashboard.pagination.next') }}">
         <svg class="icon"><use href="/static/icons.svg#i-chevron-right"/></svg>
       </button>
     </div>
@@ -235,14 +235,14 @@
   <section class="section">
     <h3 class="section-title">
       <svg class="icon"><use href="/static/icons.svg#i-alert-triangle"/></svg>
-      Top errors
+      {{ t('dashboard.top_errors') }}
     </h3>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Error</th>
-            <th>Count</th>
+            <th>{{ t('dashboard.table.error') }}</th>
+            <th>{{ t('dashboard.table.count') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -252,7 +252,7 @@
             <td>{{ item.count }}</td>
           </tr>
           {% else %}
-          <tr class="table-empty"><td colspan="2">No errors — all good!</td></tr>
+          <tr class="table-empty"><td colspan="2">{{ t('dashboard.table.no_errors') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

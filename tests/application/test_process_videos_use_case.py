@@ -1,4 +1,5 @@
 """Tests for ProcessVideosUseCase."""
+
 import pytest
 import os
 from unittest.mock import patch
@@ -14,7 +15,7 @@ from application.process_result import ProcessResult
 
 class TestProcessVideosUseCase:
     """Tests for ProcessVideosUseCase."""
-    
+
     @pytest.fixture
     def video_config(self):
         """Creates a VideoConfig for testing."""
@@ -24,22 +25,24 @@ class TestProcessVideosUseCase:
             resolution=VideoResolution.P720,
             width=1280,
             height=720,
-            profile=VideoProfile.HIGH
+            profile=VideoProfile.HIGH,
         )
-    
+
     @pytest.fixture
     def audio_config(self):
         """Creates an AudioConfig for testing."""
-        return AudioConfig(
-            codec=AudioCodec.AAC,
-            bitrate=128,
-            channels=2,
-            profile=None
-        )
-    
+        return AudioConfig(codec=AudioCodec.AAC, bitrate=128, channels=2, profile=None)
+
     @pytest.fixture
-    def use_case(self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
-                 mock_logger, video_config, audio_config):
+    def use_case(
+        self,
+        mock_video_repository,
+        mock_filesystem,
+        mock_transcoder_factory,
+        mock_logger,
+        video_config,
+        audio_config,
+    ):
         """Creates a ProcessVideosUseCase instance for testing."""
         return ProcessVideosUseCase(
             video_repository=mock_video_repository,
@@ -49,109 +52,132 @@ class TestProcessVideosUseCase:
             video_config=video_config,
             audio_config=audio_config,
             video_input_path="/test/media",
-            execution_threads=2
+            execution_threads=2,
         )
-    
+
     def test_execute_no_videos(self, use_case, mock_filesystem):
         """Test execute when no videos are found."""
         mock_filesystem.find_videos.return_value = []
-        
+
         result = use_case.execute()
-        
+
         assert isinstance(result, ProcessResult)
         assert result.total_processed == 0
         assert result.transcoded == 0
         assert result.already_transcoded == 0
         assert result.errors == 0
         assert result.is_success is True
-    
-    def test_execute_video_already_transcoded(self, use_case, mock_filesystem, 
-                                               mock_video_repository, sample_video):
+
+    def test_execute_video_already_transcoded(
+        self, use_case, mock_filesystem, mock_video_repository, sample_video
+    ):
         """Test execute when video is already transcoded."""
         from domain.models.video import Video, VideoTrack, AudioTrack, Container
-        
+
         video_path = "/test/media/video.mp4"
         mock_filesystem.find_videos.return_value = [video_path]
         mock_filesystem.file_exists.return_value = True
-        mock_filesystem.find_transcoded_video.return_value = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
-        
+        mock_filesystem.find_transcoded_video.return_value = (
+            "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
+        )
+
         # Create transcoded video with correct codec and resolution
         transcoded_video = Video(
             path="/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4",
-            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="h264", framerate=30
+            ),
             audio_track=AudioTrack(),
-            container=Container(format="mp4")
+            container=Container(format="mp4"),
         )
-        
+
         # Mock existing transcoding
         existing_transcoding = Transcoding(
             original_video=sample_video,
             transcoded_video=transcoded_video,
-            status=TranscodingStatus.COMPLETED
+            status=TranscodingStatus.COMPLETED,
         )
         mock_video_repository.find_by_original_path.return_value = existing_transcoding
-        
-        with patch.object(use_case, '_read_video_metadata', return_value=sample_video):
+
+        with patch.object(use_case, "_read_video_metadata", return_value=sample_video):
             result = use_case.execute()
-        
+
         assert result.total_processed == 1
         assert result.already_transcoded == 1
         assert result.transcoded == 0
-    
-    def test_execute_video_needs_transcoding(self, use_case, mock_filesystem,
-                                              mock_video_repository, mock_transcoder,
-                                              sample_video):
+
+    def test_execute_video_needs_transcoding(
+        self,
+        use_case,
+        mock_filesystem,
+        mock_video_repository,
+        mock_transcoder,
+        sample_video,
+    ):
         """Test execute when video needs transcoding."""
         video_path = "/test/media/video.mp4"
         mock_filesystem.find_videos.return_value = [video_path]
         mock_filesystem.file_exists.return_value = False  # No transcoded video exists
-        mock_video_repository.find_by_original_path.return_value = None  # No existing transcoding
-        
-        with patch.object(use_case, '_read_video_metadata', return_value=sample_video), \
-             patch.object(use_case, '_transcode_video', return_value=True):
+        mock_video_repository.find_by_original_path.return_value = (
+            None  # No existing transcoding
+        )
+
+        with (
+            patch.object(use_case, "_read_video_metadata", return_value=sample_video),
+            patch.object(use_case, "_transcode_video", return_value=True),
+        ):
             result = use_case.execute()
-        
+
         assert result.total_processed == 1
         assert result.transcoded == 1
         assert result.already_transcoded == 0
-    
-    def test_execute_transcoding_fails(self, use_case, mock_filesystem,
-                                        mock_video_repository, sample_video):
+
+    def test_execute_transcoding_fails(
+        self, use_case, mock_filesystem, mock_video_repository, sample_video
+    ):
         """Test execute when transcoding fails."""
         video_path = "/test/media/video.mp4"
         mock_filesystem.find_videos.return_value = [video_path]
         mock_filesystem.file_exists.return_value = False
         mock_video_repository.find_by_original_path.return_value = None
-        
-        with patch.object(use_case, '_read_video_metadata', return_value=sample_video), \
-             patch.object(use_case, '_transcode_video', return_value=False):
+
+        with (
+            patch.object(use_case, "_read_video_metadata", return_value=sample_video),
+            patch.object(use_case, "_transcode_video", return_value=False),
+        ):
             result = use_case.execute()
-        
+
         assert result.total_processed == 1
         assert result.transcoded == 0
         assert result.errors == 1
-    
+
     def test_calculate_output_height_landscape(self, use_case):
         """Test calculating output height for landscape video."""
-        video_track = VideoTrack(width=1920, height=1080, codec_name="h264", framerate=30)
+        video_track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=30
+        )
         height = use_case._calculate_output_height(video_track)
-        
+
         # Should return configured height (720) for landscape
         assert height == 720
-    
+
     def test_calculate_output_height_portrait(self, use_case):
         """Test calculating output height for portrait video."""
-        video_track = VideoTrack(width=1080, height=1920, codec_name="h264", framerate=30)
+        video_track = VideoTrack(
+            width=1080, height=1920, codec_name="h264", framerate=30
+        )
         height = use_case._calculate_output_height(video_track)
-        
+
         # Should return configured width (1280) for portrait (vertical video)
         assert height == 1280
-    
+
     def test_calculate_output_height_square(self, use_case):
         """Test calculating output height for square video."""
-        video_track = VideoTrack(width=1080, height=1080, codec_name="h264", framerate=30)
+        video_track = VideoTrack(
+            width=1080, height=1080, codec_name="h264", framerate=30
+        )
         height = use_case._calculate_output_height(video_track)
-        
+
         # Square video is treated as vertical, so should return width
         assert height == 1280
 
@@ -159,120 +185,125 @@ class TestProcessVideosUseCase:
         """Test calculating audio channels when original equals config."""
         channels = use_case._calculate_output_audio_channels(2)
         assert channels == 2  # Should use config value
-    
+
     def test_calculate_output_framerate(self, use_case):
         """Test calculating output framerate."""
         framerate = use_case._calculate_output_framerate(60)
         # Should convert 60fps to 30fps for light videos
         assert framerate == 30.0
-    
+
     def test_calculate_output_framerate_ntsc(self, use_case):
         """Test calculating output framerate for NTSC rates."""
         framerate = use_case._calculate_output_framerate(29)
         # Should find closest match (29.97) and convert if needed
         assert isinstance(framerate, float)
-    
+
     def test_is_transcoding_valid_completed_status(self, use_case, sample_video):
         """Test _is_transcoding_valid with completed status."""
         from domain.models.transcoding import Transcoding, TranscodingStatus
-        
+
         transcoded_video = Video(
             path="/test/transcoded.mp4",
-            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="h264", framerate=30
+            ),
             audio_track=AudioTrack(),
-            container=Container(format="mp4")
+            container=Container(format="mp4"),
         )
-        
+
         transcoding = Transcoding(
             original_video=sample_video,
             transcoded_video=transcoded_video,
-            status=TranscodingStatus.COMPLETED
+            status=TranscodingStatus.COMPLETED,
         )
-        
+
         # Should be valid if codec and resolution match
         result = use_case._is_transcoding_valid(transcoding)
         assert result is True
-    
+
     def test_is_transcoding_valid_pending_status(self, use_case, sample_video):
         """Test _is_transcoding_valid with pending status."""
         from domain.models.transcoding import Transcoding, TranscodingStatus
-        
+
         transcoding = Transcoding(
-            original_video=sample_video,
-            status=TranscodingStatus.PENDING
+            original_video=sample_video, status=TranscodingStatus.PENDING
         )
-        
+
         result = use_case._is_transcoding_valid(transcoding)
         assert result is False
-    
+
     def test_is_transcoding_valid_not_required_status(self, use_case, sample_video):
         """Test _is_transcoding_valid with NOT_REQUIRED status."""
         from domain.models.transcoding import Transcoding, TranscodingStatus
-        
+
         placeholder_video = Video(
             path="/test/placeholder.mp4",
             video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
             audio_track=AudioTrack(),
-            container=Container(format="")
+            container=Container(format=""),
         )
-        
+
         transcoding = Transcoding(
             original_video=sample_video,
             transcoded_video=placeholder_video,
-            status=TranscodingStatus.NOT_REQUIRED
+            status=TranscodingStatus.NOT_REQUIRED,
         )
-        
+
         result = use_case._is_transcoding_valid(transcoding)
         assert result is True
-    
+
     def test_is_transcoding_valid_wrong_codec(self, use_case, sample_video):
         """Test _is_transcoding_valid with COMPLETED status (codec validation removed)."""
         from domain.models.transcoding import Transcoding, TranscodingStatus
-        
+
         transcoded_video = Video(
             path="/test/transcoded.mp4",
-            video_track=VideoTrack(width=1280, height=720, codec_name="vp8", framerate=30),
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="vp8", framerate=30
+            ),
             audio_track=AudioTrack(),
-            container=Container(format="mp4")
+            container=Container(format="mp4"),
         )
-        
+
         transcoding = Transcoding(
             original_video=sample_video,
             transcoded_video=transcoded_video,
-            status=TranscodingStatus.COMPLETED
+            status=TranscodingStatus.COMPLETED,
         )
-        
+
         # COMPLETED status is always valid regardless of codec/resolution
         result = use_case._is_transcoding_valid(transcoding)
         assert result is True
-    
+
     def test_is_transcoding_valid_resolution_too_high(self, use_case, sample_video):
         """Test _is_transcoding_valid with COMPLETED status (resolution validation removed)."""
         from domain.models.transcoding import Transcoding, TranscodingStatus
-        
+
         transcoded_video = Video(
             path="/test/transcoded.mp4",
-            video_track=VideoTrack(width=1920, height=1080, codec_name="h264", framerate=30),
+            video_track=VideoTrack(
+                width=1920, height=1080, codec_name="h264", framerate=30
+            ),
             audio_track=AudioTrack(),
-            container=Container(format="mp4")
+            container=Container(format="mp4"),
         )
-        
+
         transcoding = Transcoding(
             original_video=sample_video,
             transcoded_video=transcoded_video,
-            status=TranscodingStatus.COMPLETED
+            status=TranscodingStatus.COMPLETED,
         )
-        
+
         # COMPLETED status is always valid regardless of codec/resolution
         result = use_case._is_transcoding_valid(transcoding)
         assert result is True
-    
+
     def test_read_video_metadata_with_valid_content(self, use_case, mock_filesystem):
         """Test _read_video_metadata parses valid 2-line Synology metadata."""
         tokens = ["0"] * 60
-        tokens[39] = "1920"   # WIDTH
-        tokens[40] = "1080"   # HEIGHT
-        tokens[35] = "30"     # FRAMERATE
+        tokens[39] = "1920"  # WIDTH
+        tokens[40] = "1080"  # HEIGHT
+        tokens[35] = "30"  # FRAMERATE
         content = "header line\n" + " ".join(tokens) + "\n"
         mock_filesystem.read_file.return_value = content
 
@@ -281,7 +312,9 @@ class TestProcessVideosUseCase:
         assert video.video_track.width == 1920
         assert video.video_track.height == 1080
 
-    def test_read_video_metadata_raises_returns_placeholder(self, use_case, mock_filesystem):
+    def test_read_video_metadata_raises_returns_placeholder(
+        self, use_case, mock_filesystem
+    ):
         """Test _read_video_metadata returns placeholder when read_file raises."""
         mock_filesystem.read_file.side_effect = OSError("permission denied")
 
@@ -289,7 +322,7 @@ class TestProcessVideosUseCase:
 
         assert video.video_track.width == 0
         assert video.video_track.height == 0
-    
+
     def test_read_video_metadata_file_not_exists(self, use_case, mock_filesystem):
         """Test _read_video_metadata when file doesn't exist."""
         mock_filesystem.read_file.return_value = None
@@ -300,7 +333,7 @@ class TestProcessVideosUseCase:
         assert video.path == video_path
         assert video.video_track.width == 0
         assert video.video_track.height == 0
-    
+
     def test_get_output_path(self, use_case, mock_filesystem, temp_dir):
         """Test _get_output_path creates correct path."""
 
@@ -312,7 +345,7 @@ class TestProcessVideosUseCase:
 
         # Verify ensure_directory was called
         mock_filesystem.ensure_directory.assert_called_once()
-    
+
     def test_read_video_metadata_file_error_handling(self, use_case, mock_filesystem):
         """Test _read_video_metadata handles file read errors."""
         # read_file returns None when file can't be read
@@ -325,7 +358,7 @@ class TestProcessVideosUseCase:
 
         assert video.path == video_path
         assert video.video_track.width == 0  # Placeholder values
-    
+
     def test_read_video_metadata_invalid_format(self, use_case, mock_filesystem):
         """Test _read_video_metadata handles invalid file format."""
         # File has only header line (less than 2 lines)
@@ -337,51 +370,55 @@ class TestProcessVideosUseCase:
 
         assert video.path == video_path
         assert video.video_track.width == 0  # Placeholder values
-    
+
     def test_calculate_output_height_vertical_video(self, use_case):
         """Test _calculate_output_height with vertical video."""
         # Vertical video: height >= width
-        video_track = VideoTrack(width=720, height=1280, codec_name="h264", framerate=30)
-        
+        video_track = VideoTrack(
+            width=720, height=1280, codec_name="h264", framerate=30
+        )
+
         # For vertical video, output height should be video_config.width
         output_height = use_case._calculate_output_height(video_track)
-        
+
         assert output_height == use_case.video_config.width  # 1280
-    
+
     def test_calculate_output_height_horizontal_video(self, use_case):
         """Test _calculate_output_height with horizontal video."""
         # Horizontal video: width > height
-        video_track = VideoTrack(width=1920, height=1080, codec_name="h264", framerate=30)
-        
+        video_track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=30
+        )
+
         # For horizontal video, output height should be video_config.height
         output_height = use_case._calculate_output_height(video_track)
-        
+
         assert output_height == use_case.video_config.height  # 720
-    
+
     def test_calculate_output_audio_channels_less_than_config(self, use_case):
         """Test _calculate_output_audio_channels when original has fewer channels."""
         # Original has 1 channel, config wants 2
         output_channels = use_case._calculate_output_audio_channels(1)
-        
+
         # Should keep original (1 channel)
         assert output_channels == 1
-    
+
     def test_calculate_output_audio_channels_more_than_config(self, use_case):
         """Test _calculate_output_audio_channels when original has more channels."""
         # Original has 6 channels, config wants 2
         output_channels = use_case._calculate_output_audio_channels(6)
-        
+
         # Should use config (2 channels)
         assert output_channels == use_case.audio_config.channels
-    
+
     def test_calculate_output_audio_channels_equal_to_config(self, use_case):
         """Test _calculate_output_audio_channels when original equals config."""
         # Original has 2 channels, config wants 2
         output_channels = use_case._calculate_output_audio_channels(2)
-        
+
         # Should use config (2 channels)
         assert output_channels == use_case.audio_config.channels
-    
+
     def test_execute_with_transcoding_error(self, use_case, mock_filesystem):
         """Test execute when transcoding fails."""
         video_path = "/test/media/video.mp4"
@@ -389,31 +426,45 @@ class TestProcessVideosUseCase:
         mock_filesystem.file_exists.return_value = False
         mock_video_repository = use_case.video_repository
         mock_video_repository.find_by_original_path.return_value = None
-        
+
         # Mock _transcode_video to return False (failure)
-        with patch.object(use_case, '_transcode_video', return_value=False):
+        with patch.object(use_case, "_transcode_video", return_value=False):
             result = use_case.execute()
-        
+
         assert result.total_processed == 1
         assert result.errors == 1
         assert result.transcoded == 0
         assert result.is_success is False
-    
-    def test_transcode_video_success(self, use_case, mock_video_repository,
-                                      mock_transcoder_factory, mock_transcoder, sample_video):
+
+    def test_transcode_video_success(
+        self,
+        use_case,
+        mock_video_repository,
+        mock_transcoder_factory,
+        mock_transcoder,
+        sample_video,
+    ):
         """Test _transcode_video full path when transcoded metadata exists (success)."""
         video_path = "/test/media/video.mp4"
         transcoded_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
         real_transcoded = Video(
             path=transcoded_path,
-            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="h264", framerate=30
+            ),
             audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
             container=Container(format="mp4"),
         )
         mock_transcoder.transcode.return_value = True
 
-        with patch.object(use_case, '_get_output_path', return_value=transcoded_path), \
-             patch.object(use_case, '_read_video_metadata', side_effect=[sample_video, real_transcoded]):
+        with (
+            patch.object(use_case, "_get_output_path", return_value=transcoded_path),
+            patch.object(
+                use_case,
+                "_read_video_metadata",
+                side_effect=[sample_video, real_transcoded],
+            ),
+        ):
             result = use_case._transcode_video(video_path)
 
         assert result is True
@@ -421,48 +472,72 @@ class TestProcessVideosUseCase:
         last_saved = mock_video_repository.save.call_args_list[-1][0][0]
         assert last_saved.status == TranscodingStatus.COMPLETED
 
-    def test_transcode_video_failure(self, use_case, mock_video_repository,
-                                     mock_transcoder_factory, mock_transcoder, sample_video):
+    def test_transcode_video_failure(
+        self,
+        use_case,
+        mock_video_repository,
+        mock_transcoder_factory,
+        mock_transcoder,
+        sample_video,
+    ):
         """Test _transcode_video full path when transcoding fails."""
         video_path = "/test/media/video.mp4"
         transcoded_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
         real_transcoded = Video(
             path=transcoded_path,
-            video_track=VideoTrack(width=1280, height=720, codec_name="h264", framerate=30),
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="h264", framerate=30
+            ),
             audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
             container=Container(format="mp4"),
         )
         mock_transcoder.transcode.return_value = False
 
-        with patch.object(use_case, '_get_output_path', return_value=transcoded_path), \
-             patch.object(use_case, '_read_video_metadata', side_effect=[sample_video, real_transcoded]):
+        with (
+            patch.object(use_case, "_get_output_path", return_value=transcoded_path),
+            patch.object(
+                use_case,
+                "_read_video_metadata",
+                side_effect=[sample_video, real_transcoded],
+            ),
+        ):
             result = use_case._transcode_video(video_path)
 
         assert result is False
         last_saved = mock_video_repository.save.call_args_list[-1][0][0]
         assert last_saved.status == TranscodingStatus.FAILED
 
-    def test_transcode_video_with_placeholder(self, use_case, mock_video_repository, sample_video):
+    def test_transcode_video_with_placeholder(
+        self, use_case, mock_video_repository, sample_video
+    ):
         """Test _transcode_video when transcoded_video is a placeholder (NOT_REQUIRED)."""
         video_path = "/test/media/video.mp4"
         transcoded_video_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
-        
+
         # Create placeholder video (SYNOINDEX_MEDIA_INFO not found)
         placeholder_video = Video(
             path=transcoded_video_path,
             video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
             audio_track=AudioTrack(),
-            container=Container(format="")
+            container=Container(format=""),
         )
-        
+
         # Mock _get_output_path to avoid filesystem issues (must be mocked first)
-        with patch.object(use_case, '_get_output_path', return_value=transcoded_video_path), \
-             patch.object(use_case, '_read_video_metadata', side_effect=[sample_video, placeholder_video]):
+        with (
+            patch.object(
+                use_case, "_get_output_path", return_value=transcoded_video_path
+            ),
+            patch.object(
+                use_case,
+                "_read_video_metadata",
+                side_effect=[sample_video, placeholder_video],
+            ),
+        ):
             result = use_case._transcode_video(video_path)
-        
+
         # Should return True (not an error, just not required)
         assert result is True
-        
+
         # Verify that transcoding was saved with NOT_REQUIRED status
         assert mock_video_repository.save.called
         saved_transcoding = mock_video_repository.save.call_args[0][0]
@@ -471,8 +546,13 @@ class TestProcessVideosUseCase:
         assert saved_transcoding.configuration is None
 
     def test_execute_loads_settings_from_repository_when_provided(
-        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
-        mock_logger, video_config, audio_config
+        self,
+        mock_video_repository,
+        mock_filesystem,
+        mock_transcoder_factory,
+        mock_logger,
+        video_config,
+        audio_config,
     ):
         """execute() refreshes config from settings_repository before processing."""
         from unittest.mock import Mock
@@ -501,8 +581,13 @@ class TestProcessVideosUseCase:
         assert use_case.execution_threads == 8
 
     def test_execute_keeps_defaults_when_settings_repository_raises(
-        self, mock_video_repository, mock_filesystem, mock_transcoder_factory,
-        mock_logger, video_config, audio_config
+        self,
+        mock_video_repository,
+        mock_filesystem,
+        mock_transcoder_factory,
+        mock_logger,
+        video_config,
+        audio_config,
     ):
         """execute() silently falls back to env-derived config on repository error."""
         from unittest.mock import Mock
@@ -526,3 +611,64 @@ class TestProcessVideosUseCase:
 
         assert result.errors == 0
         assert use_case.execution_threads == 2
+
+    def test_execute_reads_hw_transcoding_from_settings_and_passes_to_factory(
+        self,
+        mock_video_repository,
+        mock_filesystem,
+        mock_transcoder_factory,
+        mock_transcoder,
+        mock_logger,
+        video_config,
+        audio_config,
+        sample_video,
+    ):
+        """execute() must read hw_transcoding from settings and forward it to factory.create()."""
+        from unittest.mock import Mock
+        from domain.models.settings import TranscodingSettings
+
+        settings_repository = Mock()
+        settings_repository.load.return_value = TranscodingSettings(
+            hw_transcoding=False
+        )
+
+        use_case = ProcessVideosUseCase(
+            video_repository=mock_video_repository,
+            filesystem=mock_filesystem,
+            transcoder_factory=mock_transcoder_factory,
+            logger=mock_logger,
+            video_config=video_config,
+            audio_config=audio_config,
+            video_input_path="/test/media",
+            settings_repository=settings_repository,
+        )
+
+        video_path = "/test/media/video.mp4"
+        transcoded_path = "/test/media/@eaDir/video.mp4/SYNOPHOTO_FILM_H.mp4"
+        real_transcoded = Video(
+            path=transcoded_path,
+            video_track=VideoTrack(
+                width=1280, height=720, codec_name="h264", framerate=30
+            ),
+            audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
+            container=Container(format="mp4"),
+        )
+        mock_filesystem.find_videos.return_value = [video_path]
+        mock_video_repository.find_by_original_path.return_value = None
+        mock_transcoder.transcode.return_value = True
+
+        with (
+            patch.object(use_case, "_get_output_path", return_value=transcoded_path),
+            patch.object(
+                use_case,
+                "_read_video_metadata",
+                side_effect=[sample_video, real_transcoded],
+            ),
+        ):
+            use_case.execute()
+
+        mock_transcoder_factory.create.assert_called_once()
+        assert (
+            mock_transcoder_factory.create.call_args.kwargs.get("hw_transcoding")
+            is False
+        )

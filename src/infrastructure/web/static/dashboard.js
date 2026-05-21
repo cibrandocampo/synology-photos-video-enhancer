@@ -50,7 +50,8 @@ function renderTranscodingsTable(transcodings) {
   const tbody = document.getElementById('transcodings-tbody');
   if (!tbody) return;
   if (transcodings.length === 0) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="4">No transcodings yet</td></tr>';
+    const msg = tbody.dataset.emptyMessage || 'No transcodings yet';
+    tbody.innerHTML = `<tr class="table-empty"><td colspan="4">${msg}</td></tr>`;
     return;
   }
   tbody.innerHTML = transcodings.map(t => `

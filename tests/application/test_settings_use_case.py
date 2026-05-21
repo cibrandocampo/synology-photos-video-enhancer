@@ -1,5 +1,4 @@
 """Tests for SettingsUseCase."""
-from unittest.mock import Mock
 
 from application.settings_use_case import SettingsUseCase
 from domain.models.settings import TranscodingSettings

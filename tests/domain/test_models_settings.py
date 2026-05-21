@@ -1,5 +1,5 @@
 """Tests for TranscodingSettings domain model."""
-import pytest
+
 from domain.models.settings import TranscodingSettings
 from domain.constants.audio import AudioCodec, AACProfile
 from domain.constants.video import VideoCodec, VideoProfile
@@ -98,7 +98,9 @@ class TestToVideoConfig:
 
 class TestToAudioConfig:
     def test_aac_with_profile(self):
-        s = TranscodingSettings(audio_codec="aac", audio_profile="aac_lc", audio_channels=2)
+        s = TranscodingSettings(
+            audio_codec="aac", audio_profile="aac_lc", audio_channels=2
+        )
         cfg = s.to_audio_config()
 
         assert cfg.codec == AudioCodec.AAC

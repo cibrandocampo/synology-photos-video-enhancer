@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Configuración{% endblock %}
+{% block title %}{{ t('settings.title') }}{% endblock %}
 
 {% block body %}
 <nav class="navbar">
@@ -11,15 +11,15 @@
   <div class="nav-links">
     <a href="/" class="nav-link">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
-      Dashboard
+      {{ t('nav.dashboard') }}
     </a>
     <a href="/settings" class="nav-link nav-link--active">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-settings"/></svg>
-      Settings
+      {{ t('nav.settings') }}
     </a>
     <a href="/logout" class="nav-link">
       <svg class="icon icon-sm"><use href="/static/icons.svg#i-log-out"/></svg>
-      Cerrar sesión
+      {{ t('nav.sign_out') }}
     </a>
   </div>
 </nav>
@@ -29,20 +29,14 @@
   <!-- Important note -->
   <div class="alert-info">
     <svg class="icon"><use href="/static/icons.svg#i-alert-triangle"/></svg>
-    <div>
-      Synology Photos solo reproduce vídeos en formato <strong>MP4</strong>, por lo que la transcodificación
-      se limita a los códecs y configuraciones compatibles con este contenedor. Consulta
-      <a href="#compat-tables" class="alert-link">las tablas de referencia</a>
-      para elegir la combinación más eficiente.
-    </div>
+    <div>{{ t('settings.info_mp4') | safe }}</div>
   </div>
 
   <!-- Saved banner -->
   {% if saved %}
   <div class="alert-success">
     <svg class="icon icon-sm"><use href="/static/icons.svg#i-check-circle"/></svg>
-    Configuración guardada. Los cambios de vídeo y audio se aplican en la siguiente ejecución.
-    Los parámetros de ejecución (hilos, retardos, intervalo) requieren reiniciar el contenedor.
+    {{ t('settings.saved') }}
   </div>
   {% endif %}
 
@@ -53,14 +47,24 @@
     <section class="section">
       <h3 class="section-title">
         <svg class="icon"><use href="/static/icons.svg#i-zap"/></svg>
-        Ejecución
-        <span class="section-title-meta">Requieren reinicio del contenedor</span>
+        {{ t('settings.section_execution') }}
+        <span class="section-title-meta">{{ t('settings.execution_meta') }}</span>
       </h3>
       <div class="settings-grid">
 
         <div class="field">
-          <label class="field-label" for="hw_transcoding">Transcodificación por hardware</label>
-          <p class="field-hint">Activa VAAPI/QSV (amd64) o V4L2M2M (arm64).</p>
+          <label class="field-label" for="hw_transcoding">{{ t('settings.hw_transcoding') }}</label>
+          {% if hw_detected %}
+          <p class="field-hint">
+            <span class="badge badge--hw">{{ t('settings.hw_detected', hw_type=(hw_detected.value | upper)) }}</span>
+            {{ t('settings.hw_enabled_hint') }}
+          </p>
+          {% else %}
+          <p class="field-hint">
+            <span class="badge badge--no-hw">{{ t('settings.hw_not_detected') }}</span>
+            {{ t('settings.hw_disabled_hint') }}
+          </p>
+          {% endif %}
           <label class="toggle">
             <input type="checkbox" id="hw_transcoding" name="hw_transcoding" {% if settings.hw_transcoding %}checked{% endif %}>
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
@@ -68,22 +72,22 @@
         </div>
 
         <div class="field">
-          <label class="field-label" for="execution_threads">Hilos de ejecución</label>
-          <p class="field-hint">Tu CPU tiene <strong>{{ cpu_count }}</strong> núcleo{{ 's' if cpu_count != 1 else '' }}. Recomendado: ≤ {{ (cpu_count / 2) | int or 1 }}.</p>
+          <label class="field-label" for="execution_threads">{{ t('settings.execution_threads') }}</label>
+          <p class="field-hint">{{ t('settings.cpu_cores_hint', count=cpu_count, plural=('s' if cpu_count != 1 else ''), recommended=((cpu_count / 2) | int or 1)) | safe }}</p>
           <input class="field-input" type="number" id="execution_threads" name="execution_threads"
                  min="1" max="{{ cpu_count }}" value="{{ settings.execution_threads }}">
         </div>
 
         <div class="field">
-          <label class="field-label" for="startup_delay">Retardo inicial (min)</label>
-          <p class="field-hint">Espera antes de la primera ejecución al arrancar.</p>
+          <label class="field-label" for="startup_delay">{{ t('settings.startup_delay') }}</label>
+          <p class="field-hint">{{ t('settings.startup_delay_hint') }}</p>
           <input class="field-input" type="number" id="startup_delay" name="startup_delay"
                  min="0" max="1440" value="{{ settings.startup_delay }}">
         </div>
 
         <div class="field">
-          <label class="field-label" for="execution_interval">Intervalo de ejecución (min)</label>
-          <p class="field-hint">Minutos entre ejecuciones periódicas.</p>
+          <label class="field-label" for="execution_interval">{{ t('settings.execution_interval') }}</label>
+          <p class="field-hint">{{ t('settings.execution_interval_hint') }}</p>
           <input class="field-input" type="number" id="execution_interval" name="execution_interval"
                  min="1" max="10080" value="{{ settings.execution_interval }}">
         </div>
@@ -95,7 +99,7 @@
     <section class="section">
       <h3 class="section-title">
         <svg class="icon"><use href="/static/icons.svg#i-monitor"/></svg>
-        Vídeo de salida
+        {{ t('settings.section_video') }}
       </h3>
       {% if settings.video_codec == "mpeg4" %}
         {% if settings.video_profile == "simple" %}{% set video_sel = "mpeg4_simple" %}
@@ -113,7 +117,7 @@
       <div class="settings-grid settings-grid--3col">
 
         <div class="field">
-          <label class="field-label" for="video_codec">Códec y perfil</label>
+          <label class="field-label" for="video_codec">{{ t('settings.video_codec_profile') }}</label>
           <select class="field-select" id="video_codec" name="video_codec">
             <optgroup label="MPEG-4">
               <option value="mpeg4"          {% if video_sel == "mpeg4"          %}selected{% endif %}>MPEG-4</option>
@@ -134,7 +138,7 @@
         </div>
 
         <div class="field">
-          <label class="field-label" for="video_resolution">Resolución</label>
+          <label class="field-label" for="video_resolution">{{ t('settings.video_resolution') }}</label>
           <select class="field-select" id="video_resolution" name="video_resolution">
             {% for res in ["144p","240p","360p","480p","720p","1080p"] %}
             <option value="{{ res }}" {% if settings.video_resolution == res %}selected{% endif %}>{{ res }}</option>
@@ -143,7 +147,7 @@
         </div>
 
         <div class="field">
-          <label class="field-label" for="video_bitrate">Bitrate (kbps)</label>
+          <label class="field-label" for="video_bitrate">{{ t('settings.video_bitrate') }}</label>
           <select class="field-select" id="video_bitrate" name="video_bitrate">
             {% for br in [200, 500, 800, 1200, 2000, 4000] %}
             <option value="{{ br }}" {% if settings.video_bitrate == br %}selected{% endif %}>{{ br }} kbps</option>
@@ -158,13 +162,13 @@
     <section class="section">
       <h3 class="section-title">
         <svg class="icon"><use href="/static/icons.svg#i-sliders-horizontal"/></svg>
-        Audio de salida
+        {{ t('settings.section_audio') }}
       </h3>
       <div class="settings-grid settings-grid--3col">
 
         {% set audio_sel = settings.audio_profile if settings.audio_codec == "aac" else settings.audio_codec %}
         <div class="field">
-          <label class="field-label" for="audio_codec">Códec</label>
+          <label class="field-label" for="audio_codec">{{ t('settings.audio_codec') }}</label>
           <select class="field-select" id="audio_codec" name="audio_codec">
             <optgroup label="AAC">
               <option value="aac_lc"    {% if audio_sel == "aac_lc"    %}selected{% endif %}>AAC LC — Low Complexity</option>
@@ -178,16 +182,16 @@
         </div>
 
         <div class="field">
-          <label class="field-label" for="audio_channels">Canales</label>
-          <p class="field-hint" id="hint-hev2-stereo" style="visibility:hidden">AAC HE v2 solo soporta estéreo.</p>
+          <label class="field-label" for="audio_channels">{{ t('settings.audio_channels') }}</label>
+          <p class="field-hint" id="hint-hev2-stereo" style="visibility:hidden">{{ t('settings.aac_hev2_stereo') }}</p>
           <select class="field-select" id="audio_channels" name="audio_channels">
-            <option value="1" {% if settings.audio_channels == 1 %}selected{% endif %}>1 — Mono</option>
-            <option value="2" {% if settings.audio_channels == 2 %}selected{% endif %}>2 — Estéreo</option>
+            <option value="1" {% if settings.audio_channels == 1 %}selected{% endif %}>{{ t('settings.mono') }}</option>
+            <option value="2" {% if settings.audio_channels == 2 %}selected{% endif %}>{{ t('settings.stereo') }}</option>
           </select>
         </div>
 
         <div class="field">
-          <label class="field-label" for="audio_bitrate">Bitrate (kbps)</label>
+          <label class="field-label" for="audio_bitrate">{{ t('settings.audio_bitrate') }}</label>
           <select class="field-select" id="audio_bitrate" name="audio_bitrate">
             {% for br in [32, 48, 64, 96, 128, 192, 256, 320] %}
             <option value="{{ br }}" {% if settings.audio_bitrate == br %}selected{% endif %}>{{ br }} kbps</option>
@@ -201,11 +205,11 @@
     <div class="settings-actions">
       <button type="button" id="btn-reset" class="btn btn-ghost">
         <svg class="icon icon-sm"><use href="/static/icons.svg#i-rotate-ccw"/></svg>
-        Restaurar valores por defecto
+        {{ t('settings.reset_defaults') }}
       </button>
       <button type="submit" class="btn btn-primary">
         <svg class="icon icon-sm"><use href="/static/icons.svg#i-check-circle"/></svg>
-        Guardar configuración
+        {{ t('settings.save') }}
       </button>
     </div>
 
@@ -217,20 +221,20 @@
     <section class="section" style="margin-top: 2.5rem;">
       <h3 class="section-title">
         <svg class="icon"><use href="/static/icons.svg#i-monitor"/></svg>
-        Compatibilidad de códecs de vídeo
+        {{ t('settings.compat_video_title') }}
       </h3>
       <div class="table-wrap">
         <table class="compat-table">
           <thead>
             <tr>
-              <th class="col-codec">Códec</th>
-              <th class="col-efficiency"><span class="platform-hdr" title="Eficiencia de compresión"><svg class="icon"><use href="/static/icons.svg#i-trending-up"/></svg><span>Efic.</span></span></th>
-              <th class="col-cpu"><span class="platform-hdr" title="Coste de CPU (relativo a MPEG-4)"><svg class="icon"><use href="/static/icons.svg#i-cpu"/></svg><span>CPU</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="Navegadores"><svg class="icon"><use href="/static/icons.svg#i-globe"/></svg><span>Web</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="App Android"><svg class="icon"><use href="/static/icons.svg#i-smartphone"/></svg><span>Android</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="App iOS"><svg class="icon"><use href="/static/icons.svg#i-tablet"/></svg><span>iOS</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="Chromecast & Smart TV"><svg class="icon"><use href="/static/icons.svg#i-tv"/></svg><span>TV</span></span></th>
-              <th>Notas</th>
+              <th class="col-codec">{{ t('settings.compat.codec') }}</th>
+              <th class="col-efficiency"><span class="platform-hdr" title="{{ t('settings.compat.efficiency_title') }}"><svg class="icon"><use href="/static/icons.svg#i-trending-up"/></svg><span>{{ t('settings.compat.efficiency') }}</span></span></th>
+              <th class="col-cpu"><span class="platform-hdr" title="{{ t('settings.compat.cpu_title') }}"><svg class="icon"><use href="/static/icons.svg#i-cpu"/></svg><span>{{ t('settings.compat.cpu') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.web_title') }}"><svg class="icon"><use href="/static/icons.svg#i-globe"/></svg><span>{{ t('settings.compat.web') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.android_title') }}"><svg class="icon"><use href="/static/icons.svg#i-smartphone"/></svg><span>{{ t('settings.compat.android') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.ios_title') }}"><svg class="icon"><use href="/static/icons.svg#i-tablet"/></svg><span>{{ t('settings.compat.ios') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.tv_title') }}"><svg class="icon"><use href="/static/icons.svg#i-tv"/></svg><span>{{ t('settings.compat.tv') }}</span></span></th>
+              <th>{{ t('settings.compat.notes') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -242,7 +246,7 @@
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Legacy (DivX/Xvid)</td>
+              <td>{{ t('settings.compat.mpeg4_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">H.264 / AVC</span><span class="codec-full">Advanced Video Coding</span></td>
@@ -252,7 +256,7 @@
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td><span class="badge-rec">Recomendado</span> Máxima compatibilidad</td>
+              <td><span class="badge-rec">{{ t('settings.compat.recommended') }}</span> {{ t('settings.compat.h264_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">H.265 / HEVC</span><span class="codec-full">High Efficiency Video Coding</span></td>
@@ -262,7 +266,7 @@
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Chrome y Firefox no lo soportan. Revisar compatibilidad de la CPU del NAS</td>
+              <td>{{ t('settings.compat.hevc_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">AV1</span><span class="codec-full">AOMedia Video 1</span></td>
@@ -272,7 +276,7 @@
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Requiere soporte del procesador del NAS para HW encoding</td>
+              <td>{{ t('settings.compat.av1_note') }}</td>
             </tr>
             <tr class="compat-row-disabled">
               <td class="col-codec"><span class="codec-short">H.266 / VVC</span><span class="codec-full">Versatile Video Coding</span></td>
@@ -282,37 +286,34 @@
               <td class="col-platform"><svg class="icon compat-na"><use href="/static/icons.svg#i-minus-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-na"><use href="/static/icons.svg#i-minus-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-na"><use href="/static/icons.svg#i-minus-circle"/></svg></td>
-              <td>No soportado por FFmpeg</td>
+              <td>{{ t('settings.compat.vvc_note') }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="alert-info alert-info--compact">
         <svg class="icon"><use href="/static/icons.svg#i-info"/></svg>
-        <div>
-          Los valores marcados con <sup>*</sup> asumen aceleración por hardware (Quick Sync / VAAPI).
-          Sin HW, el coste por software sería <strong>×5</strong> para H.264 / AVC y <strong>×22</strong> para H.265 / HEVC.
-        </div>
+        <div>{{ t('settings.compat.info_hw') | safe }}</div>
       </div>
     </section>
 
     <section class="section">
       <h3 class="section-title">
         <svg class="icon"><use href="/static/icons.svg#i-sliders-horizontal"/></svg>
-        Compatibilidad de códecs de audio
+        {{ t('settings.compat_audio_title') }}
       </h3>
       <div class="table-wrap">
         <table class="compat-table">
           <thead>
             <tr>
-              <th class="col-codec">Códec</th>
-              <th class="col-efficiency"><span class="platform-hdr" title="Eficiencia (bitrate mínimo para calidad transparente)"><svg class="icon"><use href="/static/icons.svg#i-trending-up"/></svg><span>Efic.</span></span></th>
-              <th class="col-quality"><span class="platform-hdr" title="Calidad perceptual MUSHRA a 128 kbps (0–100)"><svg class="icon"><use href="/static/icons.svg#i-volume-2"/></svg><span>Cal.</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="Navegadores"><svg class="icon"><use href="/static/icons.svg#i-globe"/></svg><span>Web</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="App Android"><svg class="icon"><use href="/static/icons.svg#i-smartphone"/></svg><span>Android</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="App iOS"><svg class="icon"><use href="/static/icons.svg#i-tablet"/></svg><span>iOS</span></span></th>
-              <th class="col-platform"><span class="platform-hdr" title="Chromecast & Smart TV"><svg class="icon"><use href="/static/icons.svg#i-tv"/></svg><span>TV</span></span></th>
-              <th>Notas</th>
+              <th class="col-codec">{{ t('settings.compat.codec') }}</th>
+              <th class="col-efficiency"><span class="platform-hdr" title="{{ t('settings.compat.efficiency_title') }}"><svg class="icon"><use href="/static/icons.svg#i-trending-up"/></svg><span>{{ t('settings.compat.efficiency') }}</span></span></th>
+              <th class="col-quality"><span class="platform-hdr" title="{{ t('settings.compat.quality_title') }}"><svg class="icon"><use href="/static/icons.svg#i-volume-2"/></svg><span>{{ t('settings.compat.quality') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.web_title') }}"><svg class="icon"><use href="/static/icons.svg#i-globe"/></svg><span>{{ t('settings.compat.web') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.android_title') }}"><svg class="icon"><use href="/static/icons.svg#i-smartphone"/></svg><span>{{ t('settings.compat.android') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.ios_title') }}"><svg class="icon"><use href="/static/icons.svg#i-tablet"/></svg><span>{{ t('settings.compat.ios') }}</span></span></th>
+              <th class="col-platform"><span class="platform-hdr" title="{{ t('settings.compat.tv_title') }}"><svg class="icon"><use href="/static/icons.svg#i-tv"/></svg><span>{{ t('settings.compat.tv') }}</span></span></th>
+              <th>{{ t('settings.compat.notes') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -324,7 +325,7 @@
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Solo home theater. Requiere ≥192 kbps</td>
+              <td>{{ t('settings.compat.ac3_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">MP3</span><span class="codec-full">MPEG-1/2 Audio Layer III</span></td>
@@ -334,7 +335,7 @@
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Legado, menor calidad que AAC al mismo bitrate</td>
+              <td>{{ t('settings.compat.mp3_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">Dolby Digital Plus / E-AC-3</span><span class="codec-full">Enhanced Audio Codec 3</span></td>
@@ -344,7 +345,7 @@
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-no"><use href="/static/icons.svg#i-x-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Solo home theater. Posibles restricciones por royalties</td>
+              <td>{{ t('settings.compat.eac3_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">AAC LC</span><span class="codec-full">Advanced Audio Coding – Low Complexity</span></td>
@@ -354,7 +355,7 @@
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td><span class="badge-rec">Recomendado</span> Máxima compatibilidad</td>
+              <td><span class="badge-rec">{{ t('settings.compat.recommended') }}</span> {{ t('settings.compat.aac_lc_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">AAC HE</span><span class="codec-full">Advanced Audio Coding – High Efficiency</span></td>
@@ -364,7 +365,7 @@
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Ideal para bitrates bajos (≥48 kbps)</td>
+              <td>{{ t('settings.compat.aac_he_note') }}</td>
             </tr>
             <tr>
               <td class="col-codec"><span class="codec-short">AAC HE v2</span><span class="codec-full">Advanced Audio Coding – High Efficiency v2</span></td>
@@ -374,7 +375,7 @@
               <td class="col-platform"><svg class="icon compat-partial"><use href="/static/icons.svg#i-minus-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-partial"><use href="/static/icons.svg#i-minus-circle"/></svg></td>
               <td class="col-platform"><svg class="icon compat-yes"><use href="/static/icons.svg#i-check-circle"/></svg></td>
-              <td>Calidad supera a todos a ≤48 kbps. Solo estéreo</td>
+              <td>{{ t('settings.compat.aac_hev2_note') }}</td>
             </tr>
           </tbody>
         </table>

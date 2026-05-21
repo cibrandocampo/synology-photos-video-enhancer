@@ -1,4 +1,5 @@
 """Auth router: login (GET/POST) and logout."""
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 
@@ -7,6 +8,7 @@ from infrastructure.web.auth import (
     html_require_session,
     verify_credentials,
 )
+from infrastructure.web.i18n import detect_locale
 
 
 router = APIRouter()
@@ -16,8 +18,12 @@ router = APIRouter()
 async def login_get(request: Request):
     if request.session.get(SESSION_USER_KEY):
         return RedirectResponse(url="/", status_code=302)
+    locale = detect_locale(request)
+    t = request.app.state.translations.for_locale(locale)
     templates = request.app.state.templates
-    return templates.TemplateResponse(request=request, name="login.html", context={})
+    return templates.TemplateResponse(
+        request=request, name="login.html", context={"t": t, "locale": locale}
+    )
 
 
 @router.post("/login")
@@ -37,11 +43,13 @@ async def login_post(
         f"Failed dashboard login attempt for username={username!r} from {client_host}"
     )
 
+    locale = detect_locale(request)
+    t = request.app.state.translations.for_locale(locale)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": "Invalid credentials"},
+        context={"t": t, "locale": locale, "error": t("auth.invalid_credentials")},
         status_code=401,
     )
 
