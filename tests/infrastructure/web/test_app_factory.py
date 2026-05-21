@@ -183,6 +183,12 @@ class TestTemplateRendering:
         assert response.headers["content-type"].startswith("text/css")
         assert ".bar" in response.text
 
+    def test_service_worker_is_served_at_root(self, client):
+        response = client.get("/sw.js")
+
+        assert response.status_code == 200
+        assert "javascript" in response.headers["content-type"]
+
 
 class TestSecurityHeadersIntegration:
     def test_html_response_carries_full_header_set(self, client):

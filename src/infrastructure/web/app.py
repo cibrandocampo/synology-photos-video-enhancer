@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse
+from starlette.responses import FileResponse, RedirectResponse
 
 from application.dashboard_stats_use_case import DashboardStatsUseCase
 from application.settings_use_case import SettingsUseCase
@@ -60,6 +60,10 @@ def create_app(
     app.state.logger = logger
 
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+    @app.get("/sw.js", include_in_schema=False)
+    async def _service_worker():
+        return FileResponse(str(_STATIC_DIR / "sw.js"), media_type="application/javascript")
 
     for router in routers:
         app.include_router(router)
