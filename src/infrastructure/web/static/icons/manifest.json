@@ -1,0 +1,15 @@
+{
+  "name": "Synology Photos Video Enhancer",
+  "short_name": "Video Enhancer",
+  "description": "Dashboard for monitoring and configuring the Synology Photos Video Enhancer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#454961",
+  "icons": [
+    { "src": "/static/icons/pwa-64x64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/static/icons/pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icons/pwa-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icons/maskable-icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
