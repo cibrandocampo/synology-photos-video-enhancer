@@ -1,10 +1,36 @@
-# Synology Photos – Intermediate Video Quality Enhancer
+# Synology Photos – Video Quality Enhancer
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/cibrandocampo/synology-photos-video-enhancer)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/cibrandocampo/synology-photos-video-enhancer)](https://github.com/cibrandocampo/synology-photos-video-enhancer/releases)
-[![Python](https://img.shields.io/badge/python-3.14-blue?logo=python)](https://www.python.org/)
-[![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fcibrandocampo%2Fsynology-photos-video-enhancer%2F&query=%24.pull_count&label=docker%20pulls&logo=docker&color=066da5)](https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer)
-[![Codecov](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer/graph/badge.svg)](https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer)
+<p align="center">
+  <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer"><img src="https://img.shields.io/badge/Source-GitHub-181717?logo=github&logoColor=white" alt="Source on GitHub"/></a>
+  <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer/actions/workflows/ci.yml"><img src="https://github.com/cibrandocampo/synology-photos-video-enhancer/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  <a href="https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer"><img src="https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer?logo=docker&color=066da5" alt="Docker Pulls"/></a>
+  <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer/releases"><img src="https://img.shields.io/github/v/release/cibrandocampo/synology-photos-video-enhancer" alt="Latest release"/></a>
+  <a href="https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer"><img src="https://codecov.io/gh/cibrandocampo/synology-photos-video-enhancer/graph/badge.svg" alt="Codecov"/></a>
+  <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT"/></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white" alt="Python 3.14"/>
+  <img src="https://img.shields.io/badge/FFmpeg-Jellyfin-007808?logo=ffmpeg&logoColor=white" alt="FFmpeg (Jellyfin)"/>
+  <img src="https://img.shields.io/badge/platforms-amd64%20·%20arm64-informational" alt="amd64 · arm64"/>
+  <img src="https://img.shields.io/badge/HW_accel-QSV%20·%20VAAPI%20·%20V4L2M2M-blueviolet" alt="QSV · VAAPI · V4L2M2M"/>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/src/infrastructure/web/static/logo.svg" width="96" alt="Synology Photos Video Enhancer logo"/>
+  <br/><br/>
+  <i>Fix the videos Synology Photos ruins.</i>
+  <br/>
+  Automatic re-transcoding of Synology Photos intermediate videos — H.264 High Profile or H.265/HEVC, hardware-accelerated, running on your NAS.
+</p>
+
+<p align="center">
+  <a href="https://cibrandocampo.github.io/synology-photos-video-enhancer/"><strong>See the project site →</strong></a>
+  <br/>
+  <sub>How it works, features, screenshots, codec reference and setup guide</sub>
+</p>
+
+---
 
 Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video's codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
@@ -145,6 +171,34 @@ For architecture details, see the [Architecture Documentation](https://github.co
 | [Architecture](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/src/README.md) | Hexagonal architecture and data flow |
 | [Development Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/dev/README.md) | Local development, debugging, Docker dev setup |
 | [Testing Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/tests/README.md) | Test structure, fixtures, coverage |
+
+## Codec Reference
+
+Use this table to pick the right output settings in the dashboard.
+
+### Video codecs
+
+| Codec | Efficiency | CPU cost | Web | Android | iOS | TV | Notes |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| MPEG-4 | ↓ | ×1 | ✗ | ✗ | ✗ | ✓ | Legacy (DivX/Xvid) |
+| **H.264 / AVC** ⭐ | = | ×0.2 * | ✓ | ✓ | ✓ | ✓ | **Recommended** — maximum compatibility |
+| H.265 / HEVC | ↑ | ×0.4 * | ✗ | ✓ | ✓ | ✓ | Chrome/Firefox don't support it; check NAS CPU for HW encoding |
+| AV1 | ↑↑ | ×22 | ✓ | ✗ | ✗ | ✓ | Requires NAS CPU with HW AV1 encoding support |
+
+\* CPU cost with hardware acceleration (QSV/VAAPI). Without HW: H.264 ×5, H.265 ×22.
+
+### Audio codecs
+
+| Codec | Efficiency | Quality † | Web | Android | iOS | TV | Notes |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| AC-3 / Dolby Digital | ↓ | 82 | ✗ | ✗ | ✗ | ✓ | Home theater only. Needs ≥192 kbps |
+| MP3 | = | 75 | ✓ | ✓ | ✓ | ✓ | Legacy; lower quality than AAC at same bitrate |
+| E-AC-3 / Dolby Digital Plus | = | 91 | ✗ | ✗ | ✗ | ✓ | Home theater only. Possible royalty restrictions |
+| **AAC LC** ⭐ | ↑ | 88 | ✓ | ✓ | ✓ | ✓ | **Recommended** — maximum compatibility |
+| AAC HE | ↑↑ | 82 | ✓ | ✓ | ✓ | ✓ | Ideal for low bitrates (≥48 kbps) |
+| AAC HE v2 | ↑↑↑ | 70 | ✓ | ~ | ~ | ✓ | Stereo only; best at ≤48 kbps |
+
+† MUSHRA perceptual quality score at 128 kbps (0–100). ~ = partial support depending on device.
 
 ## Software Architecture
 

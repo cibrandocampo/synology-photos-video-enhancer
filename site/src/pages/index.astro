@@ -64,7 +64,7 @@ const faqItems = [
   },
   {
     q: 'What if I have no GPU or hardware acceleration?',
-    a: 'Set HW_TRANSCODING=False in .env. The tool falls back to software encoding via FFmpeg. Transcoding takes longer but still works on any host.',
+    a: 'Hardware acceleration is auto-detected at container startup. If the DRI device (/dev/dri/renderD128) is not present, the container falls back to software encoding automatically — no configuration needed. To force software encoding on a machine that does have a GPU, remove the devices: block from docker-compose.yml before starting the container.',
   },
   {
     q: 'Can I control the quality — codec, bitrate, resolution?',
@@ -145,43 +145,313 @@ const faqItems = [
 
   <!-- Section 6 — Self-host -->
   <section id="self-host" class="mx-auto max-w-4xl px-6 py-16 sm:py-24 border-t border-slate-800">
-    <div class="text-center mb-10">
+    <div class="text-center mb-12">
       <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Self-host in 5 minutes</h2>
       <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
-        Three files, two secrets, <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-slate-200">docker compose up</code>. Full walkthrough in the README.
+        Four steps: download, configure <code class="rounded bg-slate-800 px-1.5 py-0.5 text-sm text-slate-200">.env</code>, set your volume paths, start.
       </p>
     </div>
-    <div class="relative rounded-xl border border-slate-800 bg-slate-950/80 p-6 shadow-xl shadow-enhancer-900/20">
-      <button
-        id="copy-install-snippet"
-        type="button"
-        class="absolute top-4 right-4 rounded-md border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-enhancer-400"
-      >
-        Copy
-      </button>
-      <pre class="overflow-x-auto text-sm leading-relaxed text-slate-200"><code id="install-snippet"># 1. Download compose file and env template
-curl -O https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docker-compose.yml
+
+    <div class="space-y-10">
+
+      <!-- Step 1 -->
+      <div>
+        <h3 class="flex items-center gap-3 text-lg font-semibold text-slate-100 mb-4">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-enhancer-500 text-sm font-bold text-white">1</span>
+          Download the files
+        </h3>
+        <div class="relative rounded-xl border border-slate-800 bg-slate-950/80 p-5 shadow-lg">
+          <button
+            id="copy-install-snippet"
+            type="button"
+            class="absolute top-4 right-4 rounded-md border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-enhancer-400"
+          >
+            Copy
+          </button>
+          <pre class="overflow-x-auto text-sm leading-relaxed text-slate-200"><code id="install-snippet">curl -O https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/docker-compose.yml
 curl -O https://raw.githubusercontent.com/cibrandocampo/synology-photos-video-enhancer/master/env.example
-cp env.example .env
+cp env.example .env</code></pre>
+        </div>
+      </div>
 
-# 2. Edit .env:
-#    - Set DASHBOARD_PASSWORD (required)
-#    - Set DASHBOARD_SECRET_KEY (generate with:
-#      python -c "import secrets; print(secrets.token_urlsafe(32))")
-#    - Point DATABASE_HOST_PATH to a persistent directory
+      <!-- Step 2 -->
+      <div>
+        <h3 class="flex items-center gap-3 text-lg font-semibold text-slate-100 mb-4">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-enhancer-500 text-sm font-bold text-white">2</span>
+          Edit <code class="text-base font-mono text-enhancer-300">.env</code> — 3 required variables
+        </h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-800">
+                <th class="px-5 py-3 text-left font-mono text-xs text-slate-400 uppercase tracking-wider w-64">Variable</th>
+                <th class="px-5 py-3 text-left font-mono text-xs text-slate-400 uppercase tracking-wider">What to set</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+              <tr class="bg-slate-900/40">
+                <td class="px-5 py-4 font-mono text-enhancer-300 align-top whitespace-nowrap">
+                  DATABASE_HOST_PATH<span class="ml-1 text-red-400 text-xs align-super">✱</span>
+                </td>
+                <td class="px-5 py-4 text-slate-300">
+                  Absolute path on your NAS where the SQLite database will be stored. Create the folder first.
+                  <div class="mt-1 font-mono text-xs text-slate-500">e.g. <span class="text-slate-400">/volume1/docker/photo/video-enhancer/db</span></div>
+                </td>
+              </tr>
+              <tr class="bg-slate-900/40">
+                <td class="px-5 py-4 font-mono text-enhancer-300 align-top whitespace-nowrap">
+                  DASHBOARD_PASSWORD<span class="ml-1 text-red-400 text-xs align-super">✱</span>
+                </td>
+                <td class="px-5 py-4 text-slate-300">
+                  Password for the dashboard login. The container refuses to start if this is empty.
+                </td>
+              </tr>
+              <tr class="bg-slate-900/40">
+                <td class="px-5 py-4 font-mono text-enhancer-300 align-top whitespace-nowrap">
+                  DASHBOARD_SECRET_KEY<span class="ml-1 text-red-400 text-xs align-super">✱</span>
+                </td>
+                <td class="px-5 py-4 text-slate-300">
+                  HMAC key for signing session cookies. Generate it once and keep it:
+                  <div class="mt-2 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 font-mono text-xs text-slate-300">
+                    python -c "import secrets; print(secrets.token_urlsafe(32))"
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-5 py-4 font-mono text-slate-300 align-top whitespace-nowrap">DASHBOARD_PORT</td>
+                <td class="px-5 py-4 text-slate-400">Port where the dashboard is accessible. Default: <code class="text-slate-300">9200</code></td>
+              </tr>
+              <tr>
+                <td class="px-5 py-4 font-mono text-slate-300 align-top whitespace-nowrap">DASHBOARD_USER</td>
+                <td class="px-5 py-4 text-slate-400">Dashboard login username. Default: <code class="text-slate-300">admin</code></td>
+              </tr>
+              <tr>
+                <td class="px-5 py-4 font-mono text-slate-300 align-top whitespace-nowrap">APP_DOCKER_VERSION</td>
+                <td class="px-5 py-4 text-slate-400"><code class="text-slate-300">stable</code> for production (default). <code class="text-slate-300">latest</code> tracks the master branch.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-2 text-xs text-slate-500"><span class="text-red-400">✱</span> Required — the container will not start without these.</p>
+      </div>
 
-# 3. Start
-docker compose up -d
+      <!-- Step 3 -->
+      <div>
+        <h3 class="flex items-center gap-3 text-lg font-semibold text-slate-100 mb-4">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-enhancer-500 text-sm font-bold text-white">3</span>
+          Set your volume paths in <code class="text-base font-mono text-enhancer-300">docker-compose.yml</code>
+        </h3>
+        <p class="mb-4 text-slate-400 text-sm leading-relaxed">
+          Open <code class="text-slate-300">docker-compose.yml</code> and edit the <code class="text-slate-300">volumes:</code> block.
+          There are two sections to update — the media mounts and the database path:
+        </p>
+        <div class="rounded-xl border border-slate-800 bg-slate-950/80 p-5 shadow-lg overflow-x-auto">
+          <pre class="text-sm leading-relaxed"><code><span class="text-slate-500">volumes:</span>
+  <span class="text-slate-600"># ── Shared photos library ────────────────────────────────────────</span>
+  <span class="text-slate-600"># Adjust /volume1/photo to wherever your shared Photos folder lives.</span>
+  <span class="text-slate-600"># Remove this line if you don't have a shared library.</span>
+  <span class="text-slate-300">- /volume1/photo:/media/photos:rw</span>
 
-# Dashboard is at http://&lt;NAS-ip&gt;:9200/</code></pre>
+  <span class="text-slate-600"># ── Per-user photos ──────────────────────────────────────────────</span>
+  <span class="text-slate-600"># One line per Synology user. Replace user1/user2 with real usernames.</span>
+  <span class="text-slate-600"># Add or remove lines to match your users.</span>
+  <span class="text-slate-300">- /volume1/homes/user1/Photos:/media/user1:rw</span>
+  <span class="text-slate-300">- /volume1/homes/user2/Photos:/media/user2:rw</span>
+
+  <span class="text-slate-600"># ── Database ─────────────────────────────────────────────────────</span>
+  <span class="text-slate-600"># Must match DATABASE_HOST_PATH set in .env above.</span>
+  <span class="text-slate-300">- /volume1/docker/photo/video-enhancer/db:/data/db</span></code></pre>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div>
+        <h3 class="flex items-center gap-3 text-lg font-semibold text-slate-100 mb-4">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-enhancer-500 text-sm font-bold text-white">4</span>
+          Start
+        </h3>
+        <div class="rounded-xl border border-slate-800 bg-slate-950/80 p-5 shadow-lg">
+          <pre class="text-sm leading-relaxed text-slate-200"><code>docker compose up -d
+
+<span class="text-slate-500"># Dashboard → http://&lt;NAS-ip&gt;:9200/</span></code></pre>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">
+          Transcoding settings (codec, resolution, bitrate, schedule interval) are configured from the dashboard at runtime — no restart needed.
+        </p>
+      </div>
+
     </div>
-    <p class="mt-6 text-center text-sm text-slate-400">
-      Full configuration reference:
-      <a class="text-enhancer-300 hover:text-enhancer-100 underline decoration-enhancer-700 underline-offset-4" href="https://github.com/cibrandocampo/synology-photos-video-enhancer#readme">README — Configuration guide</a>
-    </p>
   </section>
 
-  <!-- Section 7 — FAQ -->
+  <!-- Section 7 — Codec reference -->
+  <section id="codecs" class="mx-auto max-w-5xl px-6 py-16 sm:py-24 border-t border-slate-800">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Codec reference</h2>
+      <p class="mt-4 text-slate-400 max-w-2xl mx-auto">
+        All output settings are configurable from the dashboard. Use this table to pick the right codec for your devices.
+      </p>
+    </div>
+
+    <!-- Video codecs -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-slate-200 mb-4">Video</h3>
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left">Codec</th>
+              <th class="px-4 py-3 text-center" title="Compression efficiency">Efficiency</th>
+              <th class="px-4 py-3 text-center" title="CPU cost relative to MPEG-4 software">CPU cost</th>
+              <th class="px-4 py-3 text-center">Web</th>
+              <th class="px-4 py-3 text-center">Android</th>
+              <th class="px-4 py-3 text-center">iOS</th>
+              <th class="px-4 py-3 text-center">TV</th>
+              <th class="px-4 py-3 text-left">Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/50">
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">MPEG-4</td>
+              <td class="px-4 py-3 text-center text-slate-500">↓</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-slate-400">×1</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Legacy (DivX/Xvid)</td>
+            </tr>
+            <tr class="bg-enhancer-950/20 hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-100">
+                H.264 / AVC
+                <span class="ml-2 rounded-full bg-enhancer-700/40 border border-enhancer-600/30 px-2 py-0.5 text-xs text-enhancer-300">Recommended</span>
+              </td>
+              <td class="px-4 py-3 text-center text-slate-400">=</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-emerald-400">×0.2 <span class="text-slate-600">*</span></td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-400 text-xs">Maximum compatibility across all devices</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">H.265 / HEVC</td>
+              <td class="px-4 py-3 text-center text-emerald-400">↑</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-emerald-400">×0.4 <span class="text-slate-600">*</span></td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Chrome/Firefox don't support it. Check your NAS CPU for HW encoding.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">AV1</td>
+              <td class="px-4 py-3 text-center text-emerald-400">↑↑</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-red-400">×22</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Requires NAS CPU with HW AV1 encoding support.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        <span class="text-slate-400">*</span> CPU cost with hardware acceleration (QSV/VAAPI). Without HW: H.264 ×5, H.265 ×22.
+      </p>
+    </div>
+
+    <!-- Audio codecs -->
+    <div>
+      <h3 class="text-lg font-semibold text-slate-200 mb-4">Audio</h3>
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left">Codec</th>
+              <th class="px-4 py-3 text-center" title="Compression efficiency">Efficiency</th>
+              <th class="px-4 py-3 text-center" title="Perceptual quality score (MUSHRA, 0–100) at 128 kbps">Quality</th>
+              <th class="px-4 py-3 text-center">Web</th>
+              <th class="px-4 py-3 text-center">Android</th>
+              <th class="px-4 py-3 text-center">iOS</th>
+              <th class="px-4 py-3 text-center">TV</th>
+              <th class="px-4 py-3 text-left">Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/50">
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">AC-3 / Dolby Digital</td>
+              <td class="px-4 py-3 text-center text-slate-500">↓</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-slate-400">82</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Home theater only. Needs ≥192 kbps.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">MP3</td>
+              <td class="px-4 py-3 text-center text-slate-400">=</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-slate-400">75</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Legacy. Lower quality than AAC at the same bitrate.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">E-AC-3 / Dolby Digital Plus</td>
+              <td class="px-4 py-3 text-center text-slate-400">=</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-emerald-400">91</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-red-400">✗</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Home theater only. Possible royalty restrictions.</td>
+            </tr>
+            <tr class="bg-enhancer-950/20 hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-100">
+                AAC LC
+                <span class="ml-2 rounded-full bg-enhancer-700/40 border border-enhancer-600/30 px-2 py-0.5 text-xs text-enhancer-300">Recommended</span>
+              </td>
+              <td class="px-4 py-3 text-center text-emerald-400">↑</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-emerald-400">88</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-400 text-xs">Maximum compatibility. Best default.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">AAC HE</td>
+              <td class="px-4 py-3 text-center text-emerald-400">↑↑</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-slate-400">82</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Ideal for low bitrates (≥48 kbps).</td>
+            </tr>
+            <tr class="hover:bg-slate-900/30">
+              <td class="px-4 py-3 font-medium text-slate-300">AAC HE v2</td>
+              <td class="px-4 py-3 text-center text-emerald-400">↑↑↑</td>
+              <td class="px-4 py-3 text-center font-mono text-xs text-slate-400">70</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-center text-amber-400">～</td>
+              <td class="px-4 py-3 text-center text-amber-400">～</td>
+              <td class="px-4 py-3 text-center text-emerald-400">✓</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">Stereo only. Best quality at ≤48 kbps.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Quality score: MUSHRA perceptual test at 128 kbps (0–100). ～ = partial support depending on device.
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 8 — FAQ -->
   <section id="faq" class="mx-auto max-w-4xl px-6 py-16 sm:py-24 border-t border-slate-800">
     <div class="text-center mb-10">
       <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">Questions people ask</h2>
