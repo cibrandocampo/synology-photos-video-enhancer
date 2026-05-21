@@ -39,8 +39,8 @@ The application needs access to all photo directories. You must mount:
 
 Copy `env.example` to `.env` next to `docker-compose.yml` and adjust values for your installation. Two dashboard variables are **required** before the container will start:
 
-- `DASHBOARD_PASSWORD` — pick any non-empty value.
-- `DASHBOARD_SECRET_KEY` — generate one with:
+- `WEB_PASSWORD` — pick any non-empty value.
+- `WEB_SECRET_KEY` — generate one with:
 
   ```bash
   python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -57,11 +57,11 @@ All other variables have sensible defaults (see the table below).
 | **Database Configuration** |
 | `DATABASE_HOST_PATH` | `./data` | Path on the HOST where the database directory is located. The SQLite database file will be stored in this location. Typically in a `volumes` or `volumes/data/` folder |
 | **Dashboard Configuration** |
-| `DASHBOARD_PORT` | `9200` | Port where the internal dashboard listens (host and container) |
-| `DASHBOARD_USER` | `admin` | Username for the single dashboard user |
-| `DASHBOARD_PASSWORD` | _(none)_ | Password for the single dashboard user. **Required** — the app refuses to start if this is empty |
-| `DASHBOARD_SECRET_KEY` | _(none)_ | HMAC key for signing the session cookie. **Required** — generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
-| `DASHBOARD_COOKIE_SECURE` | `false` | Set to `true` if the dashboard serves HTTPS directly. Leave `false` when DSM's reverse proxy terminates TLS (the typical Synology setup) |
+| `WEB_PORT` | `9200` | Port where the internal dashboard listens (host and container) |
+| `WEB_USER` | `admin` | Username for the single dashboard user |
+| `WEB_PASSWORD` | _(none)_ | Password for the single dashboard user. **Required** — the app refuses to start if this is empty |
+| `WEB_SECRET_KEY` | _(none)_ | HMAC key for signing the session cookie. **Required** — generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `WEB_COOKIE_SECURE` | `false` | Set to `true` if the dashboard serves HTTPS directly. Leave `false` when DSM's reverse proxy terminates TLS (the typical Synology setup) |
 | **Logger Configuration** |
 | `LOGGER_NAME` | `video-enhancer` | Logger name (used in log messages) |
 | `LOGGER_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
@@ -74,10 +74,10 @@ All other variables have sensible defaults (see the table below).
 
 ## Dashboard
 
-The container runs an internal HTTP dashboard on `${DASHBOARD_PORT:-9200}`, exposed by `docker-compose.yml`. After `docker compose up -d`, the dashboard is reachable at:
+The container runs an internal HTTP dashboard on `${WEB_PORT:-9200}`, exposed by `docker-compose.yml`. After `docker compose up -d`, the dashboard is reachable at:
 
 ```
-http://<NAS-ip>:${DASHBOARD_PORT:-9200}/
+http://<NAS-ip>:${WEB_PORT:-9200}/
 ```
 
 It serves HTML at `/`, JSON at `/api/stats` (same payload), and an unauthenticated `{"status":"ok"}` probe at `/healthz`. The `healthcheck:` block in `docker-compose.yml` already targets `/healthz`, so `docker ps` will report the container as `healthy` once the dashboard is reachable.

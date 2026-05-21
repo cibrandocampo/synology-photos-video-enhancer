@@ -64,7 +64,7 @@ This tool automatically re-transcodes them to modern formats with hardware accel
 
 1. **Create directory structure** on your NAS (e.g. `/volume1/docker/photo/photo-video-enhancer/`)
 2. **Copy `docker-compose.yml`** and edit volume mounts to point to your photo directories
-3. **Create `.env`** from `env.example` and set the required dashboard credentials (`DASHBOARD_PASSWORD`, `DASHBOARD_SECRET_KEY`). Transcoding settings (codec, resolution, bitrate, etc.) are configured via the dashboard at runtime.
+3. **Create `.env`** from `env.example` and set the required dashboard credentials (`WEB_PASSWORD`, `WEB_SECRET_KEY`). Transcoding settings (codec, resolution, bitrate, etc.) are configured via the dashboard at runtime.
 4. **Deploy** via Synology Container Manager or `docker compose up -d`
 
 For step-by-step instructions and the full environment variables reference, see the **[Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md)**.
@@ -97,7 +97,7 @@ View logs with `docker logs synology-photos-video-enhancer` or via Container Man
 
 The container ships with a built-in, server-rendered dashboard that runs alongside the scheduler in the same process — no extra container, no JavaScript, no external service.
 
-- **Access**: `http://<NAS-ip>:${DASHBOARD_PORT:-9200}/`. Recommended setup: put it behind DSM's reverse proxy with TLS termination.
+- **Access**: `http://<NAS-ip>:${WEB_PORT:-9200}/`. Recommended setup: put it behind DSM's reverse proxy with TLS termination.
 - **What it shows**: total transcodings, counts per status, success rate, codec distribution, resolution distribution, the latest 5 transcodings, and the top 5 errors. HTML tables and CSS bars only.
 
 **Endpoints:**
@@ -111,7 +111,7 @@ The container ships with a built-in, server-rendered dashboard that runs alongsi
 | `POST` | `/login` | none | Submit credentials |
 | `GET`  | `/logout` | required | Clear the session and redirect to `/login` |
 
-**Authentication.** Single user. Username is `DASHBOARD_USER` (defaults to `admin`); password is `DASHBOARD_PASSWORD` and is **required** — the app refuses to start if it is unset or empty. The session cookie is HMAC-signed with `DASHBOARD_SECRET_KEY` (also required). Generate the secret with:
+**Authentication.** Single user. Username is `WEB_USER` (defaults to `admin`); password is `WEB_PASSWORD` and is **required** — the app refuses to start if it is unset or empty. The session cookie is HMAC-signed with `WEB_SECRET_KEY` (also required). Generate the secret with:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -124,10 +124,10 @@ For the full list of dashboard env vars (port, cookie flags, etc.) see the **[Co
 If you were using the previous Grafana setup:
 
 - **Pull the new image** and redeploy.
-- **Edit `.env`** — add `DASHBOARD_USER`, `DASHBOARD_PASSWORD` (required), and `DASHBOARD_SECRET_KEY` (required, generate with the `python -c` command above). Optionally set `DASHBOARD_PORT` and `DASHBOARD_COOKIE_SECURE`. Remove the now-defunct `GRAFANA_*` vars.
+- **Edit `.env`** — add `WEB_USER`, `WEB_PASSWORD` (required), and `WEB_SECRET_KEY` (required, generate with the `python -c` command above). Optionally set `WEB_PORT` and `WEB_COOKIE_SECURE`. Remove the now-defunct `GRAFANA_*` vars.
 - **Update `docker-compose.yml`** — the new template no longer contains the `grafana` or `grafana-init` services. If you copied the previous compose locally, drop those service blocks yourself.
 - **Optionally delete `./grafana-data`** on the host — leftover state from the old Grafana container; it is no longer used.
-- **Update DSM's reverse proxy** entry: replace the rule that pointed at port `3000` (Grafana) with one pointing at `${DASHBOARD_PORT:-9200}` (internal dashboard).
+- **Update DSM's reverse proxy** entry: replace the rule that pointed at port `3000` (Grafana) with one pointing at `${WEB_PORT:-9200}` (internal dashboard).
 
 ## Development
 
