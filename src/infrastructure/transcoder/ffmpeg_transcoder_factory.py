@@ -1,4 +1,5 @@
 """FFmpeg transcoder factory implementation."""
+
 from domain.ports.transcoder_factory import TranscoderFactory
 from domain.ports.transcoder import Transcoder
 from domain.ports.hardware_info import HardwareInfo
@@ -21,14 +22,19 @@ class FFmpegTranscoderFactory(TranscoderFactory):
         self.hardware_info = hardware_info
         self.logger = logger
 
-    def create(self, transcoding: Transcoding) -> Transcoder:
+    def create(
+        self, transcoding: Transcoding, hw_transcoding: bool = True
+    ) -> Transcoder:
         """
         Creates an FFmpegTranscoder for the given transcoding.
 
         Args:
             transcoding: Transcoding object containing all necessary information
+            hw_transcoding: Whether to use hardware acceleration (forwarded to the transcoder)
 
         Returns:
             A configured FFmpegTranscoder instance
         """
-        return FFmpegTranscoder(transcoding, self.hardware_info, self.logger)
+        return FFmpegTranscoder(
+            transcoding, self.hardware_info, self.logger, hw_transcoding=hw_transcoding
+        )
