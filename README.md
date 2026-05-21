@@ -32,6 +32,10 @@
 
 ---
 
+<p align="center">
+  <a href="https://video-enhancer.cibran.es"><strong>See the project site →</strong></a>
+</p>
+
 Synology Photos, like YouTube and other streaming platforms, automatically generates lower-quality versions of uploaded videos. These intermediate videos are used for adaptive playback when the connection is not sufficient for the original file, or when the device does not support the original video's codec or resolution (for example, browsers without native HEVC support or devices such as Chromecast V1 that do not support 4K).
 
 The problem is that Synology Photos generates these intermediate videos with very poor quality, especially when videos are uploaded via the web interface. The transcodes are created using **H.264 baseline profile** and a framerate of only **15 fps**. The result is files that take up more space than necessary, look noticeably bad, and can even cause playback issues. Imagine trying to play your videos on a Chromecast and seeing them stutter because of the 15 fps limitation — it's simply not acceptable.
