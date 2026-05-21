@@ -12,6 +12,7 @@ const {
 } = Astro.props
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://video-enhancer.cibran.es').toString()
+const ogImage = 'https://video-enhancer.cibran.es/logo.svg'
 ---
 <!doctype html>
 <html lang="en" class="scroll-smooth">
@@ -21,16 +22,43 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://video-enhan
     <meta name="color-scheme" content="dark light" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
     <link rel="icon" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.ico`} />
     <link rel="canonical" href={canonical} />
+    <link rel="sitemap" href="/sitemap.xml" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.ico`} />
+    <meta property="og:image" content={ogImage} />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Synology Photos Video Enhancer",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Linux, Docker",
+      "description": description,
+      "url": "https://video-enhancer.cibran.es/",
+      "downloadUrl": "https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer",
+      "codeRepository": "https://github.com/cibrandocampo/synology-photos-video-enhancer",
+      "license": "https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/LICENSE",
+      "programmingLanguage": "Python",
+      "softwareVersion": "3",
+      "keywords": "Synology, Photos, video, transcoding, FFmpeg, hardware acceleration, H.264, H.265, HEVC, Docker, NAS, self-hosted",
+      "author": {
+        "@type": "Person",
+        "name": "Cibrán Docampo"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    })} />
   </head>
   <body class="min-h-screen bg-gradient-to-br from-enhancer-950 via-slate-950 to-enhancer-900 text-slate-100 antialiased">
     <slot />
