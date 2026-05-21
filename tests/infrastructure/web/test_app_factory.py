@@ -1,4 +1,5 @@
 """Smoke tests for the dashboard FastAPI app factory."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -21,6 +22,7 @@ from infrastructure.web.auth import (
     html_require_session,
     require_session,
 )
+from infrastructure.web.i18n import detect_locale
 
 
 def _dashboard_config():
@@ -84,13 +86,17 @@ def _stub_router(stats: DashboardStats) -> APIRouter:
 
     @router.get("/__test/render")
     async def stub_render(request: Request):
+        locale = detect_locale(request)
+        t = request.app.state.translations.for_locale(locale)
         templates = request.app.state.templates
         return templates.TemplateResponse(
             request=request,
             name="dashboard.html",
             context={
                 "stats": stats,
-                "max_codec_count": max((c.count for c in stats.codec_distribution), default=0),
+                "max_codec_count": max(
+                    (c.count for c in stats.codec_distribution), default=0
+                ),
                 "max_resolution_count": max(
                     (r.count for r in stats.resolution_distribution), default=0
                 ),
@@ -98,6 +104,8 @@ def _stub_router(stats: DashboardStats) -> APIRouter:
                 "page": 1,
                 "total_pages": 1,
                 "total_transcodings": 0,
+                "t": t,
+                "locale": locale,
             },
         )
 
@@ -116,6 +124,8 @@ def app(stats):
     return create_app(
         use_case=use_case,
         settings_use_case=Mock(),
+        hardware_info=Mock(),
+        translations=Mock(),
         config=_dashboard_config(),
         routers=[_stub_router(stats)],
         logger=Mock(),
@@ -199,3 +209,9 @@ class TestAppFactoryWiring:
         assert app.state.dashboard_config.user == "admin"
         assert app.state.templates is not None
         assert app.state.logger is not None
+
+    def test_app_state_exposes_hardware_info(self, app):
+        assert app.state.hardware_info is not None
+
+    def test_app_state_exposes_translations(self, app):
+        assert app.state.translations is not None

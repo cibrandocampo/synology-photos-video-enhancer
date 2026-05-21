@@ -1,4 +1,5 @@
 """Settings page: GET (form) + POST (save)."""
+
 import os
 from fastapi import APIRouter, Depends, Form, Request
 from starlette.responses import RedirectResponse
@@ -6,29 +7,30 @@ from typing import Optional
 
 from domain.models.settings import TranscodingSettings
 from infrastructure.web.auth import html_require_session
+from infrastructure.web.i18n import detect_locale
 
 router = APIRouter()
 
 
 _VIDEO_MAP: dict[str, tuple[str, str | None]] = {
-    "mpeg4":           ("mpeg4", None),
-    "mpeg4_simple":    ("mpeg4", "simple"),
+    "mpeg4": ("mpeg4", None),
+    "mpeg4_simple": ("mpeg4", "simple"),
     "mpeg4_advsimple": ("mpeg4", "advanced-simple"),
-    "h264_baseline":   ("h264", "baseline"),
-    "h264_main":       ("h264", "main"),
-    "h264_high":       ("h264", "high"),
-    "hevc_main":       ("hevc", "main"),
-    "hevc_main10":     ("hevc", "main10"),
-    "av1":             ("av1", None),
+    "h264_baseline": ("h264", "baseline"),
+    "h264_main": ("h264", "main"),
+    "h264_high": ("h264", "high"),
+    "hevc_main": ("hevc", "main"),
+    "hevc_main10": ("hevc", "main10"),
+    "av1": ("av1", None),
 }
 
 _AUDIO_MAP: dict[str, tuple[str, str | None]] = {
-    "aac_lc":    ("aac", "aac_lc"),
-    "aac_he":    ("aac", "aac_he"),
+    "aac_lc": ("aac", "aac_lc"),
+    "aac_he": ("aac", "aac_he"),
     "aac_he_v2": ("aac", "aac_he_v2"),
-    "mp3":       ("mp3", None),
-    "ac3":       ("ac3", None),
-    "eac3":      ("eac3", None),
+    "mp3": ("mp3", None),
+    "ac3": ("ac3", None),
+    "eac3": ("eac3", None),
 }
 
 
@@ -47,12 +49,23 @@ async def settings_get(
 ):
     settings_use_case = request.app.state.settings_use_case
     settings = settings_use_case.load()
+    hardware_info = request.app.state.hardware_info
+    hw_detected = hardware_info.video_acceleration
+    locale = detect_locale(request)
+    t = request.app.state.translations.for_locale(locale)
     templates = request.app.state.templates
     cpu_count = os.cpu_count() or 1
     return templates.TemplateResponse(
         request=request,
         name="settings.html",
-        context={"settings": settings, "saved": saved == "1", "cpu_count": cpu_count},
+        context={
+            "settings": settings,
+            "saved": saved == "1",
+            "cpu_count": cpu_count,
+            "hw_detected": hw_detected,
+            "t": t,
+            "locale": locale,
+        },
     )
 
 
@@ -71,8 +84,12 @@ async def settings_post(
     audio_bitrate: str = Form("128"),
     audio_channels: str = Form("2"),
 ):
-    resolved_video_codec, resolved_video_profile = _VIDEO_MAP.get(video_codec, ("h264", "high"))
-    resolved_audio_codec, resolved_audio_profile = _AUDIO_MAP.get(audio_codec, ("aac", "aac_lc"))
+    resolved_video_codec, resolved_video_profile = _VIDEO_MAP.get(
+        video_codec, ("h264", "high")
+    )
+    resolved_audio_codec, resolved_audio_profile = _AUDIO_MAP.get(
+        audio_codec, ("aac", "aac_lc")
+    )
     settings = TranscodingSettings(
         hw_transcoding=hw_transcoding is not None,
         execution_threads=_int(execution_threads, 2),

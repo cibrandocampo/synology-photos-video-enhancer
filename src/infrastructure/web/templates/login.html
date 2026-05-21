@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Sign in{% endblock %}
+{% block title %}{{ t('auth.sign_in') }}{% endblock %}
 
 {% block body %}
 <main class="login-wrap">
   <div class="login-box">
     <img src="/static/logo.svg" alt="" class="login-logo">
-    <p class="login-tagline">Enhance your Synology videos.</p>
+    <p class="login-tagline">{{ t('auth.tagline') }}</p>
 
     {% if error %}
       <div class="error-message">{{ error }}</div>
@@ -17,7 +17,7 @@
         class="login-input"
         type="text"
         name="username"
-        placeholder="Username"
+        placeholder="{{ t('auth.username') }}"
         autocomplete="username"
         required
       >
@@ -27,14 +27,14 @@
           class="login-input"
           type="password"
           name="password"
-          placeholder="Password"
+          placeholder="{{ t('auth.password') }}"
           autocomplete="current-password"
           required
         >
         <button
           type="button"
           class="password-toggle"
-          aria-label="Toggle password visibility"
+          aria-label="{{ t('auth.toggle_password') }}"
           onclick="(function(btn){
             var f=document.getElementById('password-field');
             var show=f.type==='password';
@@ -47,7 +47,7 @@
           <svg class="icon icon-eye-off" style="display:none"><use href="/static/icons.svg#i-eye-off"/></svg>
         </button>
       </div>
-      <button type="submit" class="btn btn-primary btn-block btn-login">Sign in</button>
+      <button type="submit" class="btn btn-primary btn-block btn-login">{{ t('auth.sign_in') }}</button>
     </form>
   </div>
 </main>

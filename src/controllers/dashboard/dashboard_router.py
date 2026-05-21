@@ -1,10 +1,12 @@
 """Dashboard router: HTML view, JSON API, and unauthenticated health probe."""
+
 import math
 
 from fastapi import APIRouter, Depends, Query, Request
 
 from domain.models.dashboard_stats import DashboardStats
 from infrastructure.web.auth import html_require_session, require_session
+from infrastructure.web.i18n import detect_locale
 
 
 router = APIRouter()
@@ -20,7 +22,9 @@ async def dashboard_html(
 ):
     use_case = request.app.state.use_case
     stats: DashboardStats = use_case.execute()
-    transcodings, total_transcodings = use_case.execute_latest_transcodings(page, _PAGE_SIZE)
+    transcodings, total_transcodings = use_case.execute_latest_transcodings(
+        page, _PAGE_SIZE
+    )
     total_pages = max(1, math.ceil(total_transcodings / _PAGE_SIZE))
     page = min(page, total_pages)
 
@@ -29,6 +33,8 @@ async def dashboard_html(
         max((r.count for r in stats.resolution_distribution), default=1) or 1
     )
 
+    locale = detect_locale(request)
+    t = request.app.state.translations.for_locale(locale)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -41,6 +47,8 @@ async def dashboard_html(
             "page": page,
             "total_pages": total_pages,
             "total_transcodings": total_transcodings,
+            "t": t,
+            "locale": locale,
         },
     )
 

@@ -1,4 +1,5 @@
 """Integration tests for the auth router (login/logout)."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -12,6 +13,7 @@ from domain.models.dashboard_stats import DashboardStats
 from domain.models.transcoding import TranscodingStatus
 from infrastructure.web.app import create_app
 from infrastructure.web.auth import html_require_session
+from infrastructure.web.i18n import Translations
 
 
 def _dashboard_config():
@@ -64,6 +66,8 @@ def app(stub_use_case, stub_logger):
     return create_app(
         use_case=stub_use_case,
         settings_use_case=Mock(),
+        hardware_info=Mock(),
+        translations=Translations(),
         config=_dashboard_config(),
         routers=routers,
         logger=stub_logger,

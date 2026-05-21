@@ -1,4 +1,5 @@
 """Integration tests for the dashboard router (HTML, JSON, healthz)."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -71,6 +72,8 @@ def _build_app(stats=None, *, raise_on_execute=False):
     return create_app(
         use_case=use_case,
         settings_use_case=Mock(),
+        hardware_info=Mock(),
+        translations=Mock(),
         config=_dashboard_config(),
         routers=build_routers(),
         logger=Mock(),
