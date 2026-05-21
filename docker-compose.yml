@@ -8,8 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: synology-photos-video-enhancer
     env_file:
-      - path: .env
-        required: false
+      - .env
     ports:
       - "${WEB_PORT:-9200}:${WEB_PORT:-9200}"
     healthcheck:
