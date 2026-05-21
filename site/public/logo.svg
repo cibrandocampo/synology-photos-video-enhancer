@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#1a1a2e"/>
+
+  <!-- Play button — rounded triangle, same geometric weight as reference D -->
+  <!-- Vertices of base triangle: (172,148) top-left, (340,256) right tip, (172,364) bottom-left -->
+  <!-- Each corner rounded with a quadratic bezier (r≈24) -->
+  <path d="M172 172 Q172 148 192 161 L320 243 Q340 256 320 269 L192 356 Q172 364 172 340 Z" fill="#e2e8f0"/>
+
+  <!-- Notification dot: dark halo for separation, then brand amber -->
+  <circle cx="394" cy="106" r="72" fill="#1a1a2e"/>
+  <circle cx="394" cy="106" r="58" fill="#FCD34D"/>
+</svg>
