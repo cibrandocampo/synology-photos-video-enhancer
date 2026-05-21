@@ -1,6 +1,7 @@
 # Synology Photos – Video Quality Enhancer
 
 <p align="center">
+  <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer"><img src="https://img.shields.io/badge/Source-GitHub-181717?logo=github&logoColor=white" alt="Source on GitHub"/></a>
   <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer/actions/workflows/ci.yml"><img src="https://github.com/cibrandocampo/synology-photos-video-enhancer/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
   <a href="https://hub.docker.com/r/cibrandocampo/synology-photos-video-enhancer"><img src="https://img.shields.io/docker/pulls/cibrandocampo/synology-photos-video-enhancer?logo=docker&color=066da5" alt="Docker Pulls"/></a>
   <a href="https://github.com/cibrandocampo/synology-photos-video-enhancer/releases"><img src="https://img.shields.io/github/v/release/cibrandocampo/synology-photos-video-enhancer" alt="Latest release"/></a>
