@@ -2,7 +2,8 @@
 
 import math
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 
 from domain.models.dashboard_stats import DashboardStats
 from infrastructure.web.auth import html_require_session, require_session
@@ -77,6 +78,35 @@ async def transcodings_json(
         "total_pages": total_pages,
         "total": total,
     }
+
+
+@router.get("/api/transcodings/search")
+async def transcodings_search(
+    request: Request,
+    path: str = Query(..., min_length=3),
+    _user: str = Depends(require_session),
+):
+    results = request.app.state.retranscode_use_case.find(path)
+    return {"results": [r.model_dump() for r in results]}
+
+
+class RetranscodeRequest(BaseModel):
+    original_video_path: str
+
+
+@router.post("/api/transcodings/retranscode")
+async def retranscode(
+    request: Request,
+    body: RetranscodeRequest,
+    _user: str = Depends(require_session),
+):
+    updated = request.app.state.retranscode_use_case.reset(body.original_video_path)
+    if not updated:
+        raise HTTPException(
+            status_code=409,
+            detail="Video not found or not eligible for retranscoding (must be completed or failed).",
+        )
+    return {"status": "pending", "original_video_path": body.original_video_path}
 
 
 @router.get("/healthz")

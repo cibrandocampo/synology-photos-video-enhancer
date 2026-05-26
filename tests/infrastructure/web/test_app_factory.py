@@ -124,6 +124,7 @@ def app(stats):
     return create_app(
         use_case=use_case,
         settings_use_case=Mock(),
+        retranscode_use_case=Mock(),
         hardware_info=Mock(),
         translations=Mock(),
         config=_dashboard_config(),

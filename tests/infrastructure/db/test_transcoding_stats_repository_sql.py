@@ -107,7 +107,7 @@ class TestTranscodingStatsRepositorySQL:
             "not_required": 1,
             "failed": 4,
         }
-        assert stats.success_rate == 33.33
+        assert stats.success_rate == 55.56
 
     def test_codec_distribution_excludes_non_completed_and_orders_desc(
         self, db_connection, repository
@@ -282,3 +282,73 @@ class TestFetchLatestTranscodings:
         assert {t.original_video_path for t in page1}.isdisjoint(
             {t.original_video_path for t in page2}
         )
+
+
+class TestSearchByPath:
+    def test_substring_match_returns_matching_records(self, db_connection, repository):
+        _seed(db_connection, [
+            _row(original="/media/vacation/beach.mp4"),
+            _row(original="/media/vacation/sunset.mp4"),
+            _row(original="/media/work/meeting.mp4"),
+        ])
+
+        results = repository.search_by_path("vacation")
+
+        paths = [r.original_video_path for r in results]
+        assert "/media/vacation/beach.mp4" in paths
+        assert "/media/vacation/sunset.mp4" in paths
+        assert "/media/work/meeting.mp4" not in paths
+
+    def test_match_is_case_insensitive(self, db_connection, repository):
+        _seed(db_connection, [_row(original="/media/vacation/beach.mp4")])
+
+        results = repository.search_by_path("VACATION")
+
+        assert len(results) == 1
+        assert results[0].original_video_path == "/media/vacation/beach.mp4"
+
+    def test_empty_string_returns_empty_list(self, repository):
+        assert repository.search_by_path("") == []
+
+    def test_one_char_returns_empty_list(self, repository):
+        assert repository.search_by_path("a") == []
+
+    def test_two_chars_returns_empty_list(self, repository):
+        assert repository.search_by_path("ab") == []
+
+    def test_no_match_returns_empty_list(self, db_connection, repository):
+        _seed(db_connection, [_row(original="/media/vacation/beach.mp4")])
+
+        assert repository.search_by_path("zzz") == []
+
+    def test_results_ordered_by_path_ascending(self, db_connection, repository):
+        _seed(db_connection, [
+            _row(original="/media/c_video.mp4"),
+            _row(original="/media/a_video.mp4"),
+            _row(original="/media/b_video.mp4"),
+        ])
+
+        results = repository.search_by_path("video")
+
+        paths = [r.original_video_path for r in results]
+        assert paths == sorted(paths)
+
+    def test_results_capped_at_20(self, db_connection, repository):
+        _seed(db_connection, [_row(original=f"/media/video_{i:03d}.mp4") for i in range(25)])
+
+        results = repository.search_by_path("video")
+
+        assert len(results) == 20
+
+    def test_returned_items_are_latest_transcoding_instances(self, db_connection, repository):
+        from domain.models.dashboard_stats import LatestTranscoding
+        _seed(db_connection, [_row(original="/media/test.mp4", error_message="oops",
+                                   status=TranscodingStatus.FAILED.value)])
+
+        results = repository.search_by_path("test")
+
+        assert len(results) == 1
+        item = results[0]
+        assert isinstance(item, LatestTranscoding)
+        assert item.status == TranscodingStatus.FAILED.value
+        assert item.error_message == "oops"

@@ -41,11 +41,26 @@ class VideoRepository(ABC):
     def save(self, transcoding: "Transcoding") -> "Transcoding":
         """
         Saves or updates a transcoding.
-        
+
         Args:
             transcoding: Transcoding to save
-            
+
         Returns:
             Saved transcoding
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def reset_to_pending(self, original_path: str) -> bool:
+        """
+        Resets a transcoding to PENDING status, clearing any error message.
+        Only acts on records whose current status is COMPLETED or FAILED.
+
+        Args:
+            original_path: Path to the original video
+
+        Returns:
+            True if the record was updated, False if it did not exist or
+            was not in an eligible status (completed or failed).
         """
         pass  # pragma: no cover

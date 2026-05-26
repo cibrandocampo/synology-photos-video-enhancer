@@ -26,6 +26,9 @@ class _StubStatsRepository(TranscodingStatsRepository):
     def fetch_latest_transcodings(self, page: int, page_size: int = 5):
         return [], 0
 
+    def search_by_path(self, path: str):
+        return []
+
 
 class _ExplodingStatsRepository(TranscodingStatsRepository):
     """Stub that raises on every call to verify exception propagation."""
@@ -37,6 +40,9 @@ class _ExplodingStatsRepository(TranscodingStatsRepository):
         raise self._error
 
     def fetch_latest_transcodings(self, page: int, page_size: int = 5):
+        raise self._error
+
+    def search_by_path(self, path: str):
         raise self._error
 
 

@@ -40,6 +40,7 @@ def _build_app(settings=None, hw_acceleration=None, translations=None):
     app = create_app(
         use_case=Mock(),
         settings_use_case=settings_use_case,
+        retranscode_use_case=Mock(),
         hardware_info=hardware_info,
         translations=translations,
         config=_dashboard_config(),
