@@ -16,6 +16,8 @@ services:
       - ../tests:/app/tests
       # Mount dev directory to access requirements-dev.txt
       - ../dev:/app/dev:ro
+      # Coverage configuration (excludes tests/ from measurement)
+      - ../.coveragerc:/app/.coveragerc:ro
       # Test data directory (read-only)
       - ../tests/data:/test/data:ro
       # Test media directory (read-only)
