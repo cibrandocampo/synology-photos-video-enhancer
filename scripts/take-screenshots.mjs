@@ -13,7 +13,7 @@ const OUT_DIR  = process.env.OUT_DIR  || '/screenshots'
 const USER     = process.env.DASH_USER || 'admin'
 const PASS     = process.env.DASH_PASS || 'demo'
 
-const VIEWPORT = { width: 1280, height: 900 }
+const VIEWPORT = { width: 390, height: 844 }
 
 mkdirSync(OUT_DIR, { recursive: true })
 

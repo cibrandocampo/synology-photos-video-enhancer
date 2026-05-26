@@ -62,5 +62,68 @@ const ogImage = 'https://video-enhancer.cibran.es/logo.svg'
   </head>
   <body class="min-h-screen bg-gradient-to-br from-enhancer-950 via-slate-950 to-enhancer-900 text-slate-100 antialiased">
     <slot />
+    <dialog id="lightbox" class="lightbox-dialog" aria-label="Image preview">
+      <button id="lightbox-close" class="lightbox-close" aria-label="Close">&#x2715;</button>
+      <img id="lightbox-img" src="" alt="" class="lightbox-img" />
+    </dialog>
+    <style>
+      .lightbox-dialog {
+        border: none;
+        background: transparent;
+        padding: 0;
+        max-width: 100vw;
+        max-height: 100vh;
+        inset: 0;
+        margin: auto;
+      }
+      .lightbox-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.85);
+        cursor: zoom-out;
+      }
+      .lightbox-img {
+        display: block;
+        max-width: min(420px, 90vw);
+        max-height: 90vh;
+        height: auto;
+        border-radius: 16px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      }
+      .lightbox-close {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(30,30,40,0.8);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #e2e8f0;
+        font-size: 1.25rem;
+        line-height: 1;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+    <script>
+      const dialog = document.getElementById('lightbox') as HTMLDialogElement | null;
+      const img = document.getElementById('lightbox-img') as HTMLImageElement | null;
+      const closeBtn = document.getElementById('lightbox-close');
+
+      document.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const src = target.dataset?.lightbox;
+        if (!src || !dialog || !img) return;
+        img.src = src;
+        img.alt = (target as HTMLImageElement).alt || '';
+        dialog.showModal();
+      });
+
+      closeBtn?.addEventListener('click', () => dialog?.close());
+      dialog?.addEventListener('click', (e) => {
+        if (e.target === dialog) dialog.close();
+      });
+    </script>
   </body>
 </html>

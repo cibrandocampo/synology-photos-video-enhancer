@@ -12,9 +12,10 @@ const resolved = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${src.replace(/
     <img
       src={resolved}
       alt={alt}
-      class="rounded-[24px] w-full max-w-[320px] h-auto"
+      class="rounded-[24px] w-full max-w-[220px] h-auto cursor-zoom-in"
       loading="lazy"
       decoding="async"
+      data-lightbox={resolved}
     />
   </div>
   {caption && (
