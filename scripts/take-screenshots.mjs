@@ -33,12 +33,12 @@ await Promise.all([
   page.waitForNavigation({ waitUntil: 'networkidle' }),
   page.locator('[type="submit"]').click(),
 ])
-await page.screenshot({ path: `${OUT_DIR}/dashboard.png`, fullPage: true })
+await page.screenshot({ path: `${OUT_DIR}/dashboard.png` })
 console.log('✓ dashboard.png')
 
 // 3. Settings page
 await page.goto(`${BASE_URL}/settings`, { waitUntil: 'networkidle' })
-await page.screenshot({ path: `${OUT_DIR}/settings.png`, fullPage: true })
+await page.screenshot({ path: `${OUT_DIR}/settings.png` })
 console.log('✓ settings.png')
 
 await browser.close()
