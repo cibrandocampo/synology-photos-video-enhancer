@@ -12,8 +12,11 @@
 
   "dashboard.overview": "Overview",
   "dashboard.kpi.total": "Total",
-  "dashboard.kpi.not_required": "Not required",
-  "dashboard.kpi.to_transcode": "To transcode",
+  "dashboard.kpi.total.tooltip": "All videos detected on the Synology Photos platform.",
+  "dashboard.kpi.not_required": "No transcoding needed",
+  "dashboard.kpi.not_required.tooltip": "Videos that Synology Photos determined don't need transcoding (small resolution or duration under 5 seconds).",
+  "dashboard.kpi.to_transcode": "Need transcoding",
+  "dashboard.kpi.to_transcode.tooltip": "Videos that require a smaller version for slow connections or resource-limited clients.",
   "dashboard.breakdown": "Transcoding breakdown",
   "dashboard.kpi.completed": "Completed",
   "dashboard.kpi.failed": "Failed",
@@ -37,6 +40,13 @@
   "dashboard.top_errors": "Top errors",
   "dashboard.table.error": "Error",
   "dashboard.table.no_errors": "No errors — all good!",
+
+  "dashboard.retranscode.search_placeholder": "Search by path (min. 3 characters)…",
+  "dashboard.retranscode.search_button": "Search",
+  "dashboard.retranscode.force_button": "Force retranscode",
+  "dashboard.retranscode.success": "Reset to pending — will be reprocessed on the next run.",
+  "dashboard.retranscode.not_eligible": "This video is not eligible (must be completed or failed).",
+  "dashboard.retranscode.error": "An error occurred. Please try again.",
 
   "settings.title": "Settings",
   "settings.info_mp4": "Synology Photos only plays videos in <strong>MP4</strong> format, so transcoding is limited to codecs and configurations compatible with this container. See <a href=\"#compat-tables\" class=\"alert-link\">reference tables</a> for the most efficient combination.",

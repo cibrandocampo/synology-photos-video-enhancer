@@ -12,8 +12,11 @@
 
   "dashboard.overview": "Resumo",
   "dashboard.kpi.total": "Total",
-  "dashboard.kpi.not_required": "Non necesario",
-  "dashboard.kpi.to_transcode": "Por transcodificar",
+  "dashboard.kpi.total.tooltip": "Todos os vídeos detectados na plataforma Synology Photos.",
+  "dashboard.kpi.not_required": "Sen transcodificación",
+  "dashboard.kpi.not_required.tooltip": "Vídeos que Synology Photos determinou que non necesitan transcodificación (resolución pequena ou duración inferior a 5 segundos).",
+  "dashboard.kpi.to_transcode": "Requiren transcodificación",
+  "dashboard.kpi.to_transcode.tooltip": "Vídeos que precisan unha versión de menor tamaño para conexións lentas ou clientes con poucos recursos.",
   "dashboard.breakdown": "Desglose de transcodificacións",
   "dashboard.kpi.completed": "Completado",
   "dashboard.kpi.failed": "Fallido",
@@ -37,6 +40,13 @@
   "dashboard.top_errors": "Erros frecuentes",
   "dashboard.table.error": "Erro",
   "dashboard.table.no_errors": "Sen erros — todo ben!",
+
+  "dashboard.retranscode.search_placeholder": "Buscar por ruta (mín. 3 caracteres)…",
+  "dashboard.retranscode.search_button": "Buscar",
+  "dashboard.retranscode.force_button": "Forzar retranscodificación",
+  "dashboard.retranscode.success": "Restablecido a pendente — reprocesarase na próxima execución.",
+  "dashboard.retranscode.not_eligible": "Este vídeo non é elixible (debe estar completado ou fallido).",
+  "dashboard.retranscode.error": "Produciuse un erro. Por favor, inténtao de novo.",
 
   "settings.title": "Configuración",
   "settings.info_mp4": "Synology Photos só reproduce vídeos en formato <strong>MP4</strong>, polo que a transcodificación limítase aos códecs e configuracións compatibles con este contedor. Consulta <a href=\"#compat-tables\" class=\"alert-link\">as táboas de referencia</a> para elixir a combinación máis eficiente.",

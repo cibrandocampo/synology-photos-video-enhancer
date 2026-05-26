@@ -10,6 +10,7 @@ from domain.constants.container import get_video_extensions
 from domain.models.hardware import CPUVendor
 from application.dashboard_stats_use_case import DashboardStatsUseCase
 from application.process_videos_use_case import ProcessVideosUseCase
+from application.retranscode_use_case import RetranscodeUseCase
 from application.settings_use_case import SettingsUseCase
 from domain.models.settings import TranscodingSettings
 from infrastructure.config.config import Config
@@ -114,6 +115,10 @@ def main():
 
         # Repository
         video_repository = VideoRepositorySQL(db_connection)
+        retranscode_use_case = RetranscodeUseCase(
+            video_repository=video_repository,
+            stats_repository=stats_repository,
+        )
 
         # Filesystem
         filesystem = LocalFilesystem(get_video_extensions())
@@ -162,6 +167,7 @@ def main():
         dashboard_app = create_app(
             use_case=dashboard_use_case,
             settings_use_case=settings_use_case,
+            retranscode_use_case=retranscode_use_case,
             hardware_info=hardware_info,
             translations=translations,
             config=dashboard_config,

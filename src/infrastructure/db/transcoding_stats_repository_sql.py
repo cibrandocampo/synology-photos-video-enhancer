@@ -41,7 +41,9 @@ class TranscodingStatsRepositorySQL(TranscodingStatsRepository):
             status_counts = {status: count for status, count in status_rows}
 
             completed = status_counts.get(_COMPLETED, 0)
-            success_rate = round(completed / total * 100, 2) if total else 0.0
+            failed = status_counts.get(_FAILED, 0)
+            finished = completed + failed
+            success_rate = round(completed / finished * 100, 2) if finished else 0.0
 
             codec_rows = (
                 session.query(
@@ -164,5 +166,38 @@ class TranscodingStatsRepositorySQL(TranscodingStatsRepository):
                 for row in rows
             ]
             return transcodings, total
+        finally:
+            session.close()
+
+    def search_by_path(self, path: str) -> list[LatestTranscoding]:
+        if not path or len(path) < 3:
+            return []
+        session = self._db_connection.get_session()
+        try:
+            rows = (
+                session.query(
+                    TranscodingModel.original_video_path,
+                    TranscodingModel.transcoded_video_path,
+                    TranscodingModel.status,
+                    TranscodingModel.transcoded_video_codec,
+                    TranscodingModel.transcoded_video_resolution,
+                    TranscodingModel.error_message,
+                )
+                .filter(TranscodingModel.original_video_path.ilike(f"%{path}%"))
+                .order_by(TranscodingModel.original_video_path)
+                .limit(20)
+                .all()
+            )
+            return [
+                LatestTranscoding(
+                    original_video_path=row[0],
+                    transcoded_video_path=row[1],
+                    status=row[2],
+                    transcoded_video_codec=row[3],
+                    transcoded_video_resolution=row[4],
+                    error_message=row[5],
+                )
+                for row in rows
+            ]
         finally:
             session.close()

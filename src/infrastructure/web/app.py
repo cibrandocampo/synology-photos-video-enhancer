@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import FileResponse, RedirectResponse
 
 from application.dashboard_stats_use_case import DashboardStatsUseCase
+from application.retranscode_use_case import RetranscodeUseCase
 from application.settings_use_case import SettingsUseCase
 from domain.models.app_config import DashboardConfig
 from domain.ports.hardware_info import HardwareInfo
@@ -26,6 +27,7 @@ _STATIC_DIR = _HERE / "static"
 def create_app(
     use_case: DashboardStatsUseCase,
     settings_use_case: SettingsUseCase,
+    retranscode_use_case: RetranscodeUseCase,
     hardware_info: HardwareInfo,
     translations: Translations,
     config: DashboardConfig,
@@ -54,6 +56,7 @@ def create_app(
     app.state.templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
     app.state.use_case = use_case
     app.state.settings_use_case = settings_use_case
+    app.state.retranscode_use_case = retranscode_use_case
     app.state.hardware_info = hardware_info
     app.state.translations = translations
     app.state.dashboard_config = config

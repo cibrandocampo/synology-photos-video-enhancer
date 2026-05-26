@@ -36,6 +36,7 @@
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-film"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.total') }}</span>
+          <svg class="icon icon-sm kpi-info" title="{{ t('dashboard.kpi.total.tooltip') }}"><use href="/static/icons.svg#i-info"/></svg>
         </div>
         <span class="kpi-value">{{ stats.total }}</span>
       </div>
@@ -43,13 +44,15 @@
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-minus-circle"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.not_required') }}</span>
+          <svg class="icon icon-sm kpi-info" title="{{ t('dashboard.kpi.not_required.tooltip') }}"><use href="/static/icons.svg#i-info"/></svg>
         </div>
-        <span class="kpi-value">{{ stats.status_counts.not_required }}</span>
+        <span class="kpi-value c-muted">{{ stats.status_counts.not_required }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.to_transcode') }}</span>
+          <svg class="icon icon-sm kpi-info" title="{{ t('dashboard.kpi.to_transcode.tooltip') }}"><use href="/static/icons.svg#i-info"/></svg>
         </div>
         <span class="kpi-value">{{ to_transcode }}</span>
       </div>
@@ -65,14 +68,14 @@
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-check-circle"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.completed') }}</span>
         </div>
-        <span class="kpi-value">{{ stats.status_counts.completed }}</span>
+        <span id="kpi-completed" class="kpi-value">{{ stats.status_counts.completed }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-x-circle"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.failed') }}</span>
         </div>
-        <span class="kpi-value {% if stats.status_counts.failed > 0 %}c-danger{% endif %}">
+        <span id="kpi-failed" class="kpi-value {% if stats.status_counts.failed > 0 %}c-danger{% endif %}">
           {{ stats.status_counts.failed }}
         </span>
       </div>
@@ -81,21 +84,21 @@
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-clock"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.pending') }}</span>
         </div>
-        <span class="kpi-value">{{ stats.status_counts.pending }}</span>
+        <span id="kpi-pending" class="kpi-value {% if stats.status_counts.pending > 0 %}c-warning{% endif %}">{{ stats.status_counts.pending }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-zap"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.in_progress') }}</span>
         </div>
-        <span class="kpi-value">{{ stats.status_counts.in_progress }}</span>
+        <span id="kpi-in-progress" class="kpi-value {% if stats.status_counts.in_progress > 0 %}c-info{% endif %}">{{ stats.status_counts.in_progress }}</span>
       </div>
       <div class="kpi">
         <div class="kpi-header">
           <svg class="icon icon-sm"><use href="/static/icons.svg#i-percent"/></svg>
           <span class="kpi-label">{{ t('dashboard.kpi.success_rate') }}</span>
         </div>
-        <span class="kpi-value {% if stats.success_rate >= 90 %}c-success{% elif stats.success_rate < 70 %}c-danger{% else %}c-warning{% endif %}">
+        <span id="kpi-success-rate" class="kpi-value {% if stats.success_rate >= 90 %}c-success{% elif stats.success_rate < 70 %}c-danger{% else %}c-warning{% endif %}">
           {{ "%.1f"|format(stats.success_rate) }}%
         </span>
       </div>
@@ -123,8 +126,11 @@
             <td>{{ item.codec }}</td>
             <td>{{ item.count }}</td>
             <td class="bar-cell">
-              <div class="bar-track">
-                <div class="bar-fill" style="width: {{ (item.count / max_codec_count * 100) | round(0, 'floor') if max_codec_count else 0 }}%"></div>
+              <div class="bar-wrap">
+                <span class="bar-pct">{{ "%.1f"|format(item.count / stats.status_counts.completed * 100 if stats.status_counts.completed else 0) }}%</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: {{ (item.count / max_codec_count * 100) | round(0, 'floor') if max_codec_count else 0 }}%"></div>
+                </div>
               </div>
             </td>
           </tr>
@@ -157,8 +163,11 @@
             <td>{{ item.resolution }}</td>
             <td>{{ item.count }}</td>
             <td class="bar-cell">
-              <div class="bar-track">
-                <div class="bar-fill" style="width: {{ [item.count / max_resolution_count * 100, 2] | max | round(0, 'floor') if max_resolution_count else 0 }}%"></div>
+              <div class="bar-wrap">
+                <span class="bar-pct">{{ "%.1f"|format(item.count / stats.status_counts.completed * 100 if stats.status_counts.completed else 0) }}%</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: {{ [item.count / max_resolution_count * 100, 2] | max | round(0, 'floor') if max_resolution_count else 0 }}%"></div>
+                </div>
               </div>
             </td>
           </tr>
@@ -181,20 +190,37 @@
       <svg class="icon"><use href="/static/icons.svg#i-list"/></svg>
       {{ t('dashboard.latest_transcodings') }}
       <span class="section-title-meta">{{ total_transcodings }} {{ t('dashboard.total_suffix') }}</span>
+      <button class="search-toggle" id="transcodings-search-toggle" title="{{ t('dashboard.retranscode.search_button') }}">
+        <svg class="icon icon-sm"><use href="/static/icons.svg#i-search"/></svg>
+      </button>
     </h3>
+    <div class="transcodings-search-bar" id="transcodings-search-bar" hidden>
+      <input
+        type="search"
+        class="transcodings-search-input"
+        id="transcodings-search-input"
+        placeholder="{{ t('dashboard.retranscode.search_placeholder') }}"
+        autocomplete="off"
+      >
+    </div>
     <div class="table-wrap">
-      <table>
+      <table class="transcodings-table">
         <thead>
           <tr>
             <th></th>
             <th>{{ t('dashboard.table.original') }}</th>
-            <th>{{ t('dashboard.table.codec') }}</th>
+            <th class="col-codec">{{ t('dashboard.table.codec') }}</th>
             <th>{{ t('dashboard.table.resolution') }}</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="transcodings-tbody" data-empty-message="{{ t('dashboard.table.no_transcodings') }}">
           {% for item in transcodings %}
-          <tr>
+          <tr class="row-clickable"
+            data-path="{{ item.original_video_path }}"
+            data-status="{{ item.status }}"
+            data-codec="{{ item.transcoded_video_codec or '' }}"
+            data-resolution="{{ item.transcoded_video_resolution or '' }}">
             <td class="cell-status">
               {% if item.status == 'completed' %}
                 <svg class="icon icon-sm status-icon--completed"><use href="/static/icons.svg#i-check-circle"/></svg>
@@ -208,12 +234,23 @@
                 <svg class="icon icon-sm status-icon--muted"><use href="/static/icons.svg#i-minus-circle"/></svg>
               {% endif %}
             </td>
-            <td class="cell-path" title="{{ item.original_video_path }}">{{ item.original_video_path }}</td>
-            <td>{{ item.transcoded_video_codec or "—" }}</td>
+            <td class="cell-path" title="{{ item.original_video_path }}">{{ item.original_video_path.split('/')[-1] }}</td>
+            <td class="col-codec">{{ item.transcoded_video_codec or "—" }}</td>
             <td>{{ item.transcoded_video_resolution or "—" }}</td>
+            <td class="cell-action">
+              {% if item.status in ('completed', 'failed') %}
+              <button
+                class="btn-retranscode"
+                data-path="{{ item.original_video_path }}"
+                title="{{ t('dashboard.retranscode.force_button') }}"
+              >
+                <svg class="icon icon-sm"><use href="/static/icons.svg#i-rotate-ccw"/></svg>
+              </button>
+              {% endif %}
+            </td>
           </tr>
           {% else %}
-          <tr class="table-empty"><td colspan="4">{{ t('dashboard.table.no_transcodings') }}</td></tr>
+          <tr class="table-empty"><td colspan="5">{{ t('dashboard.table.no_transcodings') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -260,5 +297,31 @@
   </section>
 
 </main>
+
+<dialog id="transcoding-detail-dialog" class="detail-dialog">
+  <div class="detail-dialog-header">
+    <span id="detail-status-icon"></span>
+    <span id="detail-filename" class="detail-filename"></span>
+    <button class="detail-close-btn" id="detail-close-btn">
+      <svg class="icon icon-sm"><use href="/static/icons.svg#i-x"/></svg>
+    </button>
+  </div>
+  <dl class="detail-dialog-body">
+    <dt>{{ t('dashboard.table.original') }}</dt>
+    <dd id="detail-path" class="detail-path"></dd>
+    <dt>{{ t('dashboard.table.codec') }}</dt>
+    <dd id="detail-codec"></dd>
+    <dt>{{ t('dashboard.table.resolution') }}</dt>
+    <dd id="detail-resolution"></dd>
+  </dl>
+  <div class="detail-dialog-footer" id="detail-dialog-footer"></div>
+</dialog>
+
+<div id="js-labels" hidden
+  data-force-button="{{ t('dashboard.retranscode.force_button') }}"
+  data-success="{{ t('dashboard.retranscode.success') }}"
+  data-not-eligible="{{ t('dashboard.retranscode.not_eligible') }}"
+  data-error="{{ t('dashboard.retranscode.error') }}"
+></div>
 <script src="/static/dashboard.js"></script>
 {% endblock %}

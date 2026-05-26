@@ -1,5 +1,6 @@
 """SQL implementation of video repository."""
 from typing import Optional
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -117,5 +118,21 @@ class VideoRepositorySQL(VideoRepository):
         except IntegrityError:
             session.rollback()
             raise
+        finally:
+            session.close()
+
+    def reset_to_pending(self, original_path: str) -> bool:
+        """Resets a transcoding to PENDING if its current status is COMPLETED or FAILED."""
+        _ELIGIBLE = (TranscodingStatus.COMPLETED.value, TranscodingStatus.FAILED.value)
+        session: Session = self.db_connection.get_session()
+        try:
+            result = session.execute(
+                update(TranscodingModel)
+                .where(TranscodingModel.original_video_path == original_path)
+                .where(TranscodingModel.status.in_(_ELIGIBLE))
+                .values(status=TranscodingStatus.PENDING.value, error_message=None)
+            )
+            session.commit()
+            return result.rowcount > 0
         finally:
             session.close()

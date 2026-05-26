@@ -66,6 +66,7 @@ def app(stub_use_case, stub_logger):
     return create_app(
         use_case=stub_use_case,
         settings_use_case=Mock(),
+        retranscode_use_case=Mock(),
         hardware_info=Mock(),
         translations=Translations(),
         config=_dashboard_config(),
