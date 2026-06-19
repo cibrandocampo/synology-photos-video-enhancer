@@ -1,6 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #67e8f9;
+  --color-enhancer-50: #ecfeff;
+  --color-enhancer-100: #cffafe;
+  --color-enhancer-300: #67e8f9;
+  --color-enhancer-500: #06b6d4;
+  --color-enhancer-600: #0891b2;
+  --color-enhancer-700: #0e7490;
+  --color-enhancer-800: #155e75;
+  --color-enhancer-900: #164e63;
+  --color-enhancer-950: #0a2f3d;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 
 /* Smooth anchor scrolling for the hero CTAs. */
 html {

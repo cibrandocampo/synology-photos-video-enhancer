@@ -86,6 +86,7 @@ class TestRunProcessing:
 class TestMain:
     """Tests for main() function."""
     
+    @patch('main.run_in_thread')
     @patch('main.Config')
     @patch('main.DatabaseConnection')
     @patch('main.SettingsRepositorySQL')
@@ -103,7 +104,7 @@ class TestMain:
                                                 mock_transcoder_factory,
                                                 mock_hardware_info, mock_filesystem,
                                                 mock_repository, mock_settings_repo,
-                                                mock_db, mock_config):
+                                                mock_db, mock_config, mock_run_in_thread):
         """Test main() handles shutdown during startup delay."""
         import main
 
@@ -136,6 +137,7 @@ class TestMain:
         # Should have called signal handlers
         assert mock_signal.call_count == 2  # SIGTERM and SIGINT
 
+    @patch('main.run_in_thread')
     @patch('main.Config')
     @patch('main.DatabaseConnection')
     @patch('main.SettingsRepositorySQL')
@@ -153,7 +155,7 @@ class TestMain:
                                      mock_transcoder_factory,
                                      mock_hardware_info, mock_filesystem,
                                      mock_repository, mock_settings_repo,
-                                     mock_db, mock_config):
+                                     mock_db, mock_config, mock_run_in_thread):
         """Test main() handles KeyboardInterrupt."""
         import main
 
