@@ -231,6 +231,13 @@ backend/staticfiles/
 docs/plans/
 docs/tasks/
 
+# ── Docker bind-mount artefacts ──────────────────
+# Empty placeholder files created by Docker when a file-level bind mount
+# (e.g. .coveragerc:/app/.coveragerc) is overlaid on a directory mount
+# (src:/app). They are not real config files.
+src/.coveragerc
+src/pytest.ini
+
 # ── Local deployment configs ─────────────────────
 deploy/
 
