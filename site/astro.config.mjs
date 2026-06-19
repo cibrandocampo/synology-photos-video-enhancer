@@ -1,9 +1,11 @@
 import { defineConfig } from 'astro/config'
-import tailwind from '@astrojs/tailwind'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   site: 'https://video-enhancer.cibran.es',
   output: 'static',
   trailingSlash: 'ignore',
-  integrations: [tailwind()],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 })
