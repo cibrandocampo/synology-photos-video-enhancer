@@ -43,4 +43,9 @@ WORKDIR /app
 EXPOSE 9200
 COPY ./src /app
 
+# Version shown in the dashboard footer. CI passes the output of
+# `git describe --tags --always --abbrev=5`; local builds keep "dev".
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 ENTRYPOINT ["python", "main.py"]

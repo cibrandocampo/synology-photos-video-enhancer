@@ -292,6 +292,14 @@ body {
   padding: 2rem;
 }
 
+.app-version {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--c-text-3);
+  margin: 1.5rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ========================================
    KPI groups
    ======================================== */
@@ -323,6 +331,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  /* Long labels must not widen the grid track and overflow the viewport */
+  min-width: 0;
 }
 
 .kpi-header {
@@ -330,6 +340,7 @@ body {
   align-items: center;
   gap: 0.4rem;
   color: var(--c-text-3);
+  min-width: 0;
 }
 
 .kpi-label {
@@ -337,6 +348,9 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  min-width: 0;
+  /* Break long single words (e.g. "TRANSCODIFICACIÓN") instead of clipping */
+  overflow-wrap: anywhere;
 }
 
 .kpi-value {

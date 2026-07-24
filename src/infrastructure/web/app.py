@@ -14,6 +14,7 @@ from application.settings_use_case import SettingsUseCase
 from domain.models.app_config import DashboardConfig
 from domain.ports.hardware_info import HardwareInfo
 from domain.ports.logger import AppLogger
+from infrastructure.version import APP_VERSION
 from infrastructure.web.auth import RedirectToLoginRequired
 from infrastructure.web.i18n import Translations
 from infrastructure.web.security_headers import SecurityHeadersMiddleware
@@ -54,6 +55,9 @@ def create_app(
         return RedirectResponse(url="/login", status_code=302)
 
     app.state.templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+    # Global so the base layout can render the footer without every router
+    # having to thread the version through its template context.
+    app.state.templates.env.globals["app_version"] = APP_VERSION
     app.state.use_case = use_case
     app.state.settings_use_case = settings_use_case
     app.state.retranscode_use_case = retranscode_use_case

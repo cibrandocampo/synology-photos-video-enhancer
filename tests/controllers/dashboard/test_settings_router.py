@@ -79,6 +79,12 @@ class TestSettingsGet:
         assert response.headers["content-type"].startswith("text/html")
         assert "settings" in response.text.lower()
 
+    def test_page_ends_with_the_build_version(self, client):
+        _login(client)
+        response = client.get("/settings")
+
+        assert '<p class="app-version">dev</p>' in response.text
+
     def test_saved_query_param_shows_confirmation(self, client):
         _login(client)
         response = client.get("/settings?saved=1")

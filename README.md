@@ -55,10 +55,10 @@ This tool automatically re-transcodes them to modern formats with hardware accel
 
 ## Prerequisites
 
-- APP: Synology Photos > 1.8
-- SO: Synology DSM > 7.1
-- Docker: Version > 20 | It is recommended to use Synology's "Container Manager" as it greatly facilitates management. Version > 24
-- Intel CPUs Only: SynoCli Video Drivers package > 1.3 | Provides video driver support for Intel GPU acceleration (DSM6-7), including OpenCL (DSM7.1+ only). **Note:** AMD CPUs have drivers included by default, this package is only required for Intel processors. Available from [SynoCommunity](https://synocommunity.com/).
+- APP: Synology Photos 1.9.1 or later
+- SO: Synology DSM 7.3.2 or later
+- Docker: Version 24.0.2 or later, via Synology's "Container Manager" (recommended, as it greatly facilitates management)
+- Intel CPUs Only: SynoCli Video Drivers package 1.5.8 or later | Provides video driver support for Intel GPU acceleration, including OpenCL. **Note:** AMD CPUs have drivers included by default, this package is only required for Intel processors. Available from [SynoCommunity](https://synocommunity.com/).
 
 ## Quick Start
 
