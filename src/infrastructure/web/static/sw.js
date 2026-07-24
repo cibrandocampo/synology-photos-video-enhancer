@@ -1,4 +1,4 @@
-const CACHE = 'video-enhancer-v2';
+const CACHE = 'video-enhancer-v3';
 const STATIC = [
   '/static/style.css',
   '/static/icons.svg',

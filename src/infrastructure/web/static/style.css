@@ -292,6 +292,14 @@ body {
   padding: 2rem;
 }
 
+.app-version {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--c-text-3);
+  margin: 1.5rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ========================================
    KPI groups
    ======================================== */
