@@ -4,6 +4,7 @@
 
 # Python
 __pycache__
+**/__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -13,6 +14,20 @@ __pycache__
 *.egg-info
 dist
 build
+
+# Test and coverage artefacts.
+# Running the test container bind-mounts ./src at /app, so anything the container
+# writes into /app — coverage reports, caches, mount-point stubs — lands in ./src on
+# the host and would otherwise be COPYied straight into the runtime image.
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+**/coverage
+**/coverage.xml
+**/htmlcov
+**/tests
+**/pytest.ini
+**/.coveragerc
 
 # Virtual environments
 venv/

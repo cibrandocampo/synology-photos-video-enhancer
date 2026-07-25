@@ -26,6 +26,9 @@ from infrastructure.hardware.local_hardware_info import (
     HW_ACCELERATION_DEVICE_PATH,
 )
 from infrastructure.logger import Logger
+from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
+from infrastructure.metadata.ffprobe_metadata_reader import FFprobeMetadataReader
+from infrastructure.metadata.synoindex_metadata_reader import SynoIndexMetadataReader
 from infrastructure.transcoder.ffmpeg_transcoder_factory import FFmpegTranscoderFactory
 from infrastructure.web.app import create_app
 from infrastructure.web.i18n import Translations
@@ -123,6 +126,19 @@ def main():
         # Filesystem
         filesystem = LocalFilesystem(get_video_extensions())
 
+        # Metadata readers
+        # Source videos: prefer Synology's index — it is already on disk and stores
+        # display geometry with rotation applied — and probe the file only when the
+        # index is missing or unusable.
+        ffprobe_reader = FFprobeMetadataReader(logger)
+        metadata_reader = ChainedMetadataReader(
+            [
+                SynoIndexMetadataReader(filesystem, logger),
+                ffprobe_reader,
+            ],
+            logger,
+        )
+
         # Hardware info
         hardware_info = LocalHardwareInfo()
         logger.info("Detecting hardware...")
@@ -149,6 +165,10 @@ def main():
             video_config=_defaults.to_video_config(),
             audio_config=_defaults.to_audio_config(),
             video_input_path=config.paths.media_path,
+            metadata_reader=metadata_reader,
+            # Never the chain: Synology's index of the output file still describes
+            # the version this run overwrites.
+            output_metadata_reader=ffprobe_reader,
             execution_threads=_defaults.execution_threads,
             settings_repository=settings_repository,
         )

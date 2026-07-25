@@ -13,6 +13,7 @@ from domain.ports.filesystem import Filesystem
 from domain.ports.transcoder_factory import TranscoderFactory
 from domain.ports.logger import AppLogger
 from domain.ports.settings_repository import SettingsRepository
+from domain.ports.video_metadata_reader import VideoMetadataReader
 from domain.constants.container import ContainerFormat
 from domain.constants.framerate import FrameRate
 from application.process_result import ProcessResult
@@ -31,6 +32,8 @@ class ProcessVideosUseCase:
         video_config: VideoConfig,
         audio_config: AudioConfig,
         video_input_path: str,
+        metadata_reader: VideoMetadataReader,
+        output_metadata_reader: VideoMetadataReader,
         execution_threads: int = 2,
         settings_repository: Optional[SettingsRepository] = None,
     ):
@@ -45,11 +48,19 @@ class ProcessVideosUseCase:
             video_config: Video configuration (codec, bitrate, resolution, profile)
             audio_config: Audio configuration (codec, bitrate, channels)
             video_input_path: Root path to search for videos
+            metadata_reader: Reads metadata of source videos. Expected to prefer
+                Synology's index and fall back to probing the file.
+            output_metadata_reader: Reads metadata of the files this use case
+                produces. It must not consult Synology's index: after the output
+                file is overwritten, that index still describes the previous
+                version, which is what made stored resolutions wrong.
             execution_threads: Number of threads to use for transcoding
         """
         self.video_repository = video_repository
         self.filesystem = filesystem
         self.transcoder_factory = transcoder_factory
+        self.metadata_reader = metadata_reader
+        self.output_metadata_reader = output_metadata_reader
         self.video_config = video_config
         self.audio_config = audio_config
         self.video_input_path = video_input_path
@@ -126,23 +137,32 @@ class ProcessVideosUseCase:
         """
         self.logger.info(f"Video {video_path} needs to be transcoded")
 
-        original_video = self._read_video_metadata(video_path)
         transcoded_video_path = self._get_output_path(video_path)
-        transcoded_video = self._read_video_metadata(transcoded_video_path)
 
-        # If the transcoded video doesn't exist, Synology has determined that transcoding is not required
-        # A placeholder video has width=0 and height=0 (codec/format may have default values due to validators)
-        if (
-            transcoded_video.video_track.width == 0
-            and transcoded_video.video_track.height == 0
-        ):
+        original_video = self.metadata_reader.read(video_path)
+        if original_video is None:
+            # Orientation, framerate and channel count would all be guesses.
+            # Guessing them is what produced 404x720 files and mono audio.
+            self.logger.error(f"Could not determine video metadata for {video_path}")
+
+            transcoding = Transcoding(
+                original_video=self._unknown_video(video_path),
+                transcoded_video=self._unknown_video(transcoded_video_path),
+                configuration=None,
+                status=TranscodingStatus.FAILED,
+                error_message=f"Could not determine video metadata for {video_path}",
+            )
+            self.video_repository.save(transcoding)
+            return False
+
+        if not self.filesystem.file_exists(transcoded_video_path):
             self.logger.info(
                 f"Transcoding not required for {video_path} (Synology determined it's not necessary)"
             )
 
             transcoding = Transcoding(
                 original_video=original_video,
-                transcoded_video=transcoded_video,
+                transcoded_video=self._unknown_video(transcoded_video_path),
                 configuration=None,
                 status=TranscodingStatus.NOT_REQUIRED,
             )
@@ -175,9 +195,11 @@ class ProcessVideosUseCase:
             execution_threads=self.execution_threads,
         )
 
+        # The output geometry is unknown until the file exists, so the pending
+        # record carries a placeholder and is completed with the real values below.
         transcoding = Transcoding(
             original_video=original_video,
-            transcoded_video=transcoded_video,
+            transcoded_video=self._unknown_video(transcoded_video_path),
             configuration=transcoder_configuration,
             status=TranscodingStatus.PENDING,
         )
@@ -191,13 +213,31 @@ class ProcessVideosUseCase:
         )
         success = transcoder.transcode()
 
-        if success:
-            transcoding = transcoding.mark_as_completed()
-        else:
-            transcoding = transcoding.mark_as_failed("Transcoding failed")
-        self.video_repository.save(transcoding)
+        if not success:
+            self.video_repository.save(transcoding.mark_as_failed("Transcoding failed"))
+            return False
 
-        return success
+        # Describe what was actually produced, not what was asked for and not what
+        # Synology had produced before this run overwrote it.
+        produced_video = self.output_metadata_reader.read(transcoded_video_path)
+        if produced_video is None:
+            self.logger.error(
+                f"Transcoding finished but {transcoded_video_path} could not be read"
+            )
+            self.video_repository.save(
+                transcoding.mark_as_failed(
+                    "Transcoding finished but the output file could not be read"
+                )
+            )
+            return False
+
+        self.video_repository.save(
+            transcoding.model_copy(
+                update={"transcoded_video": produced_video}
+            ).mark_as_completed()
+        )
+
+        return True
 
     def _is_transcoding_valid(self, transcoding: Transcoding) -> bool:
         """
@@ -226,19 +266,29 @@ class ProcessVideosUseCase:
             video_track: Video track with width and height information
 
         Returns:
-            Output height to use for transcoding
+            Output height to use for transcoding, never above the source height
         """
 
         if video_track.height >= video_track.width:
+            target_height = self.video_config.width
+            orientation = "Vertical"
+        else:
+            target_height = self.video_config.height
+            orientation = "Horizontal"
+
+        # Enlarging a video costs space and gains no detail. This also bounds the
+        # damage should the source geometry ever be misread again.
+        if video_track.height and target_height > video_track.height:
             self.logger.info(
-                f"Vertical video ({video_track.resolution}) - Output height: {self.video_config.width}px"
+                f"{orientation} video ({video_track.resolution}) - Source shorter than "
+                f"target, capping output height at {video_track.height}px"
             )
-            return self.video_config.width
+            return video_track.height
 
         self.logger.info(
-            f"Horizontal video ({video_track.resolution}) - Output height: {self.video_config.height}px"
+            f"{orientation} video ({video_track.resolution}) - Output height: {target_height}px"
         )
-        return self.video_config.height
+        return target_height
 
     def _calculate_output_audio_channels(self, original_channels: int) -> int:
         """
@@ -285,73 +335,28 @@ class ProcessVideosUseCase:
 
         return output_framerate
 
-    def _read_video_metadata(self, video_path: str) -> Video:
+    @staticmethod
+    def _unknown_video(video_path: str) -> Video:
         """
-        Reads the original video metadata from SYNOINDEX_MEDIA_INFO file.
+        Builds a stand-in Video for a file whose geometry is not known.
 
-        The metadata file is located at:
-        <video_directory>/@eaDir/<video_filename>/SYNOINDEX_MEDIA_INFO
+        Used for records that must be persisted without real metadata: the
+        repository stores the resolution as "<width>x<height>" and dereferences
+        the track unconditionally, so a Video is always required. The resulting
+        "0x0" is a marker of absence, never a measurement.
 
         Args:
-            video_path: Path to the original video file
+            video_path: Path the record refers to
 
         Returns:
-            Video object with metadata from SYNOINDEX_MEDIA_INFO, or placeholder if file doesn't exist
+            Video with zeroed geometry
         """
-        video_dir = os.path.dirname(video_path)
-        video_name = os.path.basename(video_path)
-        syno_file = os.path.join(
-            video_dir, "@eaDir", video_name, "SYNOINDEX_MEDIA_INFO"
+        return Video(
+            path=video_path,
+            video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
+            audio_track=AudioTrack(),
+            container=Container(format=""),
         )
-
-        try:
-            content = self.filesystem.read_file(syno_file)
-
-            if content is None:
-                self.logger.warning(
-                    f"SYNOINDEX_MEDIA_INFO not found for {video_path}, using placeholder"
-                )
-                return Video(
-                    path=video_path,
-                    video_track=VideoTrack(
-                        width=0, height=0, codec_name="", framerate=30
-                    ),
-                    audio_track=AudioTrack(),
-                    container=Container(format=""),
-                )
-
-            lines = content.splitlines(keepends=True)
-
-            # The main data is in line 2 (index 1)
-            if len(lines) < 2:
-                self.logger.warning(
-                    f"Invalid SYNOINDEX_MEDIA_INFO format for {video_path}, using placeholder"
-                )
-                return Video(
-                    path=video_path,
-                    video_track=VideoTrack(
-                        width=0, height=0, codec_name="", framerate=30
-                    ),
-                    audio_track=AudioTrack(),
-                    container=Container(format=""),
-                )
-
-            # Parse line 2 into tokens (list of strings)
-            tokens = lines[1].strip().split()
-
-            # Create Video object from metadata
-            return Video.from_synology_metadata(video_path, tokens)
-
-        except Exception as e:
-            self.logger.warning(
-                f"Error reading SYNOINDEX_MEDIA_INFO for {video_path}: {e}, using placeholder"
-            )
-            return Video(
-                path=video_path,
-                video_track=VideoTrack(width=0, height=0, codec_name="", framerate=30),
-                audio_track=AudioTrack(),
-                container=Container(format=""),
-            )
 
     def _get_output_path(self, original_path: str) -> str:
         """

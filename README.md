@@ -99,6 +99,7 @@ The container ships with a built-in, server-rendered dashboard that runs alongsi
 
 - **Access**: `http://<NAS-ip>:${WEB_PORT:-9200}/`. Recommended setup: put it behind DSM's reverse proxy with TLS termination.
 - **What it shows**: total transcodings, counts per status, success rate, codec distribution, resolution distribution, the latest 5 transcodings, and the top 5 errors. HTML tables and CSS bars only.
+- **About failures**: a video whose dimensions cannot be determined — neither from Synology's index nor by probing the file — is recorded as `failed` and left untouched, rather than transcoded with guessed settings. Its path and the reason appear in the error list. Videos Synology never generated a transcoded version for are recorded as `not_required`, which is not a failure.
 
 **Endpoints:**
 
@@ -167,6 +168,7 @@ For architecture details, see the [Architecture Documentation](https://github.co
 | [Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md) | Directory setup, docker-compose, environment variables |
 | [Supported Formats](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/supported-formats.md) | Video/audio codecs, hardware acceleration, resolutions |
 | [SQLite Schema](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/sqlite-schema.md) | Database schema documentation |
+| [Synology Metadata](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/synology-metadata.md) | `SYNOINDEX_MEDIA_INFO` on-disk format and how it is read |
 | [Docker Build](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/DOCKER.md) | Multi-architecture Docker build guide |
 | [Architecture](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/src/README.md) | Hexagonal architecture and data flow |
 | [Development Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/dev/README.md) | Local development, debugging, Docker dev setup |

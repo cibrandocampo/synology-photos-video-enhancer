@@ -1,5 +1,6 @@
 """Tests for logger."""
 import pytest
+import inspect
 import logging
 from unittest.mock import Mock
 from infrastructure.logger import Logger, EnhancedLogger
@@ -87,17 +88,31 @@ class TestEnhancedLogger:
         # Should use custom character
         assert mock_logger.info.call_args_list[0][0][0] == "*" * len("Test")
     
-    def test_delegates_to_underlying_logger(self, enhanced_logger, mock_logger):
-        """Test that EnhancedLogger delegates other methods to underlying logger."""
+    def test_delegates_declared_methods_to_underlying_logger(self, enhanced_logger, mock_logger):
+        """Test that the methods EnhancedLogger declares reach the underlying logger."""
         enhanced_logger.info("test message")
         enhanced_logger.warning("test warning")
         enhanced_logger.error("test error")
         enhanced_logger.debug("test debug")
-        
+
         assert mock_logger.info.called
         assert mock_logger.warning.called
         assert mock_logger.error.called
         assert mock_logger.debug.called
+
+    def test_delegates_undeclared_methods_through_getattr(self, enhanced_logger, mock_logger):
+        """Test that methods EnhancedLogger does not declare still reach the logger.
+
+        Deliberately probes `exception` and `setLevel`: EnhancedLogger defines neither,
+        so this is the only test that exercises __getattr__. Asserting the delegation
+        through `debug` instead would silently stop testing it the moment an explicit
+        `debug` is added to the class — which is exactly what happened once.
+        """
+        enhanced_logger.exception("boom")
+        enhanced_logger.setLevel(logging.DEBUG)
+
+        mock_logger.exception.assert_called_once_with("boom")
+        mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
     
     def test_get_logger_with_custom_level(self):
         """Test get_logger with custom level."""
@@ -119,9 +134,26 @@ class TestEnhancedLogger:
         # This test verifies that auto-detection doesn't crash
         # The actual implementation uses inspect which is hard to mock reliably
         logger = Logger.get_logger()
-        
+
         # Should still return a logger (using default or detected name)
         assert isinstance(logger, EnhancedLogger)
+
+    def test_get_logger_survives_broken_frame_introspection(self, monkeypatch):
+        """Name auto-detection must degrade to the default, never propagate.
+
+        `inspect` is the only part of get_logger that can fail on an exotic
+        interpreter or under a profiler that replaces frame objects. Forcing it to
+        raise is the only way to reach the guard that absorbs it.
+        """
+        def explode(_frame):
+            raise RuntimeError("no frame information available")
+
+        monkeypatch.setattr(inspect, "getmodule", explode)
+
+        logger = Logger.get_logger()
+
+        assert isinstance(logger, EnhancedLogger)
+        assert logger._logger.name == "synology-photos-video-enhancer"
     
     def test_configure_root_logger_with_no_handlers(self):
         """_configure_root_logger adds a handler and sets level when root has none."""

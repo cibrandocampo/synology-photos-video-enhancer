@@ -57,6 +57,23 @@ What this does:
 
 Output: ~260 tests, ~2 s, coverage XML in `./coverage/`.
 
+### Anything written under `/app` lands in `./src`
+
+`/app` is a bind mount of `./src`. That cuts both ways:
+
+- **Never mount a file or directory inside `/app`.** `-v "$(pwd)/script.py:/app/script.py"` creates
+  `src/script.py` on the host, owned by root. `COPY ./src /app` then ships it in the production image.
+  Mount ad-hoc scripts somewhere else and point Python at the code instead:
+  ```bash
+  docker run --rm -e PYTHONPATH=/app \
+    -v "$(pwd)/src:/app" -v "/tmp/my_harness.py:/harness/my_harness.py:ro" \
+    -w /app --entrypoint python dev-video-enhancer-test:latest /harness/my_harness.py
+  ```
+- **Anything the container writes into `/app` stays in `./src`** — coverage reports, `htmlcov/`,
+  `.pytest_cache/`, `.ruff_cache/`, and empty stubs for every nested mount point (`src/tests`, `src/dev`).
+  `.gitignore` and `.dockerignore` both cover these, so they will not be committed or shipped, but they do
+  accumulate. `git status` staying clean is not evidence that `src/` is clean — check with `ls -a src/`.
+
 ### Running a single test
 
 ```bash

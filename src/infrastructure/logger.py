@@ -21,6 +21,10 @@ class EnhancedLogger(AppLogger):
         """Delegates all other attributes to the underlying logger."""
         return getattr(self._logger, name)
 
+    def debug(self, msg: str, *args, **kwargs) -> None:
+        """Logs a diagnostic message."""
+        self._logger.debug(msg, *args, **kwargs)
+
     def info(self, msg: str, *args, **kwargs) -> None:
         """Logs an informational message."""
         self._logger.info(msg, *args, **kwargs)
