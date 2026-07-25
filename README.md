@@ -120,15 +120,13 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 For the full list of dashboard env vars (port, cookie flags, etc.) see the **[Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md)**.
 
-## Migration from Grafana
+## Upgrading
 
-If you were using the previous Grafana setup:
+Coming from an older version? The **[Upgrading Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/upgrading.md)** covers what needs your attention, each entry starting from something you can observe:
 
-- **Pull the new image** and redeploy.
-- **Edit `.env`** — add `WEB_USER`, `WEB_PASSWORD` (required), and `WEB_SECRET_KEY` (required, generate with the `python -c` command above). Optionally set `WEB_PORT` and `WEB_COOKIE_SECURE`. Remove the now-defunct `GRAFANA_*` vars.
-- **Update `docker-compose.yml`** — the new template no longer contains the `grafana` or `grafana-init` services. If you copied the previous compose locally, drop those service blocks yourself.
-- **Optionally delete `./grafana-data`** on the host — leftover state from the old Grafana container; it is no longer used.
-- **Update DSM's reverse proxy** entry: replace the rule that pointed at port `3000` (Grafana) with one pointing at `${WEB_PORT:-9200}` (internal dashboard).
+- Odd resolutions such as `44100x2` or `2x1280` in the dashboard — databases written by 4.2.2 or earlier, and how to repair them.
+- More failures reported after upgrading to 4.2.3 or later — why that is intended.
+- Coming from the Grafana-based dashboard — replaced by the built-in one in 4.0.0.
 
 ## Development
 
@@ -166,6 +164,7 @@ For architecture details, see the [Architecture Documentation](https://github.co
 | Document | Description |
 |----------|-------------|
 | [Configuration Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/configuration.md) | Directory setup, docker-compose, environment variables |
+| [Upgrading Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/upgrading.md) | What needs attention when moving from an older version |
 | [Supported Formats](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/supported-formats.md) | Video/audio codecs, hardware acceleration, resolutions |
 | [SQLite Schema](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/sqlite-schema.md) | Database schema documentation |
 | [Synology Metadata](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/synology-metadata.md) | `SYNOINDEX_MEDIA_INFO` on-disk format and how it is read |

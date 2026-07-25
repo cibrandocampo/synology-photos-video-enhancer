@@ -21,6 +21,11 @@ class _StubVideoRepository(VideoRepository):
     def save(self, transcoding):
         return transcoding
 
+    def update_transcoded_metadata(
+        self, original_path: str, width: int, height: int, codec: str
+    ) -> bool:
+        return False
+
     def reset_to_pending(self, original_path: str) -> bool:
         self.reset_calls.append(original_path)
         return self._reset_result
@@ -37,6 +42,11 @@ class _ExplodingVideoRepository(VideoRepository):
         raise self._error
 
     def save(self, transcoding):
+        raise self._error
+
+    def update_transcoded_metadata(
+        self, original_path: str, width: int, height: int, codec: str
+    ) -> bool:
         raise self._error
 
     def reset_to_pending(self, original_path: str) -> bool:

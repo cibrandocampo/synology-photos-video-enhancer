@@ -121,6 +121,28 @@ class VideoRepositorySQL(VideoRepository):
         finally:
             session.close()
 
+    def update_transcoded_metadata(
+        self, original_path: str, width: int, height: int, codec: str
+    ) -> bool:
+        """Corrects the stored description of an already transcoded output file."""
+        session: Session = self.db_connection.get_session()
+        try:
+            result = session.execute(
+                update(TranscodingModel)
+                .where(TranscodingModel.original_video_path == original_path)
+                .where(TranscodingModel.status == TranscodingStatus.COMPLETED.value)
+                # Formatting lives here so the "<width>x<height>" invariant is
+                # produced in the same place _model_to_domain parses it.
+                .values(
+                    transcoded_video_resolution=f"{width}x{height}",
+                    transcoded_video_codec=codec,
+                )
+            )
+            session.commit()
+            return result.rowcount > 0
+        finally:
+            session.close()
+
     def reset_to_pending(self, original_path: str) -> bool:
         """Resets a transcoding to PENDING if its current status is COMPLETED or FAILED."""
         _ELIGIBLE = (TranscodingStatus.COMPLETED.value, TranscodingStatus.FAILED.value)

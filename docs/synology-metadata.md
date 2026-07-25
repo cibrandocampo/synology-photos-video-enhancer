@@ -138,3 +138,63 @@ version.
 
 `tests/domain/test_synoindex_media_info.py` asserts both directions for each: that a naive whitespace split
 reproduces the historical corruption, and that the parser does not.
+
+## Repairing records damaged before the fix
+
+> **Scope and lifetime.** This tooling exists for databases written by version 4.2.2 or earlier, where the
+> parsing defect described above was active. It is single-use: once a database has been repaired, and once
+> no installation is upgrading from an affected version, the script and the
+> `VideoRepository.update_transcoded_metadata` method that exists only to serve it can both be removed.
+> Nothing else in the application calls them.
+
+Fixing the parser stops new damage; it does not undo what is already stored. Two distinct problems remain in a
+database that was written by the old code, and they cost very different things to repair:
+
+| Problem | What is wrong | Repair |
+|---------|---------------|--------|
+| The file was encoded with parameters derived from shifted fields | The video itself: wrong orientation, framerate or channel count | Re-encode |
+| The row describes a file that was already replaced | Only `transcoded_video_resolution` and `transcoded_video_codec` | Update the row |
+
+`src/scripts/repair_transcoding_metadata.py` measures every `completed` record and tells the two apart. It probes
+the produced file, reads the source through the same reader chain the application uses, computes the height the
+current settings would produce, and classifies:
+
+| Classification | Meaning | Action under `--apply` |
+|----------------|---------|------------------------|
+| `OK` | The file matches expectations and the row matches the file | none |
+| `NEEDS_REENCODE` | The produced height is not what the settings would produce | reset the row to `pending` |
+| `NEEDS_ROW_UPDATE` | The file is right, the stored values are stale | write the measured resolution and codec |
+| `MISSING` | The output file no longer exists | none |
+| `UNREADABLE` | The file exists but cannot be probed, usually a permission | none |
+| `SOURCE_UNKNOWN` | The source metadata cannot be determined | none |
+
+The last three are reported and left alone deliberately. Repairing a record whose inputs cannot be measured would
+be the same guessing that caused the incident.
+
+### Prerequisite
+
+**The fixed pipeline must already be deployed.** Resetting a record to `pending` makes the next processing cycle
+re-encode it; doing that while the old parser is running reproduces the original damage exactly.
+
+### Procedure
+
+```bash
+# 1. Dry run. Writes nothing; review the summary before going further.
+docker exec synology-photos-video-enhancer \
+  python /app/scripts/repair_transcoding_metadata.py --verbose
+
+# 2. Optionally rehearse on a handful of records first.
+docker exec synology-photos-video-enhancer \
+  python /app/scripts/repair_transcoding_metadata.py --apply --limit 5
+
+# 3. Apply to everything.
+docker exec synology-photos-video-enhancer \
+  python /app/scripts/repair_transcoding_metadata.py --apply
+```
+
+Dry run is the default: `--apply` is the only thing that opens a write. The summary reports how many records would
+be queued for re-encoding, which is the amount of work being handed to the next cycle.
+
+Row updates take effect immediately. Re-encodes do not: the records sit at `pending` until the scheduler runs, and
+each one then costs a full transcode. Back up `transcodings.db` before step 3 if the database matters more than the
+few seconds it takes.

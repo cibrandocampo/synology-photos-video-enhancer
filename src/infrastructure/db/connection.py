@@ -71,6 +71,16 @@ class DatabaseConnection:
     def get_session(self):
         """Gets a database session."""
         return self.SessionLocal()
+
+    def dispose(self):
+        """
+        Closes every pooled connection.
+
+        The long-running service holds its connection for its whole life, but
+        short-lived tooling must release the pool rather than leave it to
+        interpreter shutdown.
+        """
+        self.engine.dispose()
     
     def initialize(self):
         """

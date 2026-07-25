@@ -15,7 +15,10 @@ from infrastructure.db.video_repository_sql import VideoRepositorySQL
 def db_connection(temp_db_path):
     connection = DatabaseConnection(DatabaseConfig(path=temp_db_path), Mock())
     connection.initialize()
-    return connection
+    yield connection
+    # Release the pool; leaving it to interpreter shutdown surfaces as a
+    # ResourceWarning once coverage changes collection timing.
+    connection.dispose()
 
 
 @pytest.fixture

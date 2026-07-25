@@ -24,7 +24,8 @@ def db_connection(temp_db_path):
     """Initialised DatabaseConnection backed by an empty SQLite file."""
     connection = DatabaseConnection(DatabaseConfig(path=temp_db_path), Mock())
     connection.initialize()
-    return connection
+    yield connection
+    connection.dispose()
 
 
 @pytest.fixture
