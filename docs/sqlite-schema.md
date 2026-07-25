@@ -8,10 +8,22 @@
 |-------|------|-------------|-------------|----------|--------|
 | `original_video_path` | VARCHAR(1000) | Full path to the original video file | ✅ Yes | ❌ No | ✅ Yes |
 | `transcoded_video_path` | VARCHAR(1000) | Full path to the transcoded video file | ❌ No | ❌ No | ❌ No |
-| `transcoded_video_resolution` | VARCHAR(20) | Resolution in format "widthxheight" (e.g., "1920x1080") | ❌ No | ❌ No | ❌ No |
-| `transcoded_video_codec` | VARCHAR(50) | Video codec name (e.g., "h264", "hevc") | ❌ No | ❌ No | ❌ No |
+| `transcoded_video_resolution` | VARCHAR(20) | Resolution in format "widthxheight" (e.g., "1920x1080"), measured from the produced file | ❌ No | ❌ No | ❌ No |
+| `transcoded_video_codec` | VARCHAR(50) | Video codec name (e.g., "h264", "hevc"), measured from the produced file | ❌ No | ❌ No | ❌ No |
 | `status` | VARCHAR(20) | Transcoding status (see Status Values below) | ❌ No | ❌ No | ✅ Yes |
 | `error_message` | TEXT | Error message if transcoding failed (NULL if no error) | ❌ No | ✅ Yes | ❌ No |
+
+### Measured columns
+
+`transcoded_video_resolution` and `transcoded_video_codec` describe the file this application produced.
+Both are read back by probing the output **after** a successful transcode, never taken from the requested
+configuration and never from Synology's index of that path — that index still describes the file the
+transcode overwrote. See [Synology metadata](synology-metadata.md).
+
+`0x0` is a marker of absence, not a measurement. It appears only on:
+
+- `not_required` rows, where no output file exists to measure;
+- `failed` rows recorded before any output geometry was known.
 
 ### Status Values
 

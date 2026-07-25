@@ -217,3 +217,155 @@ class TestMain:
         # Should have called sys.exit(1)
         mock_exit.assert_called_once_with(1)
 
+
+
+@patch("main.run_in_thread")
+@patch("main.create_app")
+@patch("main.build_routers", return_value=[])
+@patch("main._run_processing")
+@patch("main.schedule")
+@patch("main.signal.signal")
+@patch("main.time.sleep")
+@patch("main.MainController")
+@patch("main.ProcessVideosUseCase")
+@patch("main.FFmpegTranscoderFactory")
+@patch("main.LocalHardwareInfo")
+@patch("main.LocalFilesystem")
+@patch("main.VideoRepositorySQL")
+@patch("main.SettingsRepositorySQL")
+@patch("main.DatabaseConnection")
+@patch("main.Path")
+@patch("main.Logger")
+@patch("main.Config")
+class TestCompositionRootWiring:
+    """The arguments `main()` passes must satisfy the real constructor.
+
+    Every other test in this module patches `main.ProcessVideosUseCase`, so a use
+    case that gained a required parameter would keep the suite green while the
+    container failed to start. These tests bind the captured arguments against the
+    genuine signature instead.
+    """
+
+    def _run_main(self, mock_config, mock_logger, mock_hardware_info,
+                  mock_settings_repo, mock_sleep):
+        """Runs `main()` once with all I/O mocked out."""
+        from domain.models.app_config import DashboardConfig
+        from domain.models.hardware import CPUVendor
+        import main
+
+        config = Mock()
+        config.database = Mock()
+        config.paths = Mock()
+        config.paths.media_path = "/test/media"
+        config.dashboard = DashboardConfig(
+            port=9201,
+            user="admin",
+            password="secret",
+            secret_key="key123",
+            cookie_secure=False,
+        )
+        config.log_config = Mock()
+        mock_config.load.return_value = config
+
+        mock_logger.get_logger.return_value = Mock()
+        mock_settings_repo.return_value.load.return_value = Mock(
+            startup_delay=0, execution_interval=60
+        )
+
+        hardware = mock_hardware_info.return_value
+        cpu = Mock()
+        cpu.vendor = CPUVendor.INTEL
+        hardware.cpu = cpu
+        hardware.video_acceleration = None
+
+        state = {"called": 0}
+
+        def _stop_after_first_tick(_seconds):
+            state["called"] += 1
+            if state["called"] == 1:
+                main._shutdown_requested = True
+
+        mock_sleep.side_effect = _stop_after_first_tick
+
+        main._shutdown_requested = False
+        main.main()
+        main._shutdown_requested = False
+
+    def test_arguments_satisfy_the_real_signature(
+        self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
+        mock_video_repo, mock_filesystem, mock_hardware_info,
+        mock_transcoder_factory, mock_process_use_case, mock_main_controller,
+        mock_sleep, mock_signal, mock_schedule, mock_run_processing,
+        mock_build_routers, mock_create_app, mock_run_in_thread,
+    ):
+        """A missing required argument must fail here, not on the NAS."""
+        import inspect
+        from application.process_videos_use_case import ProcessVideosUseCase
+
+        self._run_main(
+            mock_config, mock_logger, mock_hardware_info, mock_settings_repo, mock_sleep
+        )
+
+        mock_process_use_case.assert_called_once()
+        args, kwargs = mock_process_use_case.call_args
+
+        # Raises TypeError if any required parameter is missing or unknown.
+        inspect.signature(ProcessVideosUseCase.__init__).bind(
+            Mock(name="self"), *args, **kwargs
+        )
+
+    def test_source_reader_is_the_chain(
+        self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
+        mock_video_repo, mock_filesystem, mock_hardware_info,
+        mock_transcoder_factory, mock_process_use_case, mock_main_controller,
+        mock_sleep, mock_signal, mock_schedule, mock_run_processing,
+        mock_build_routers, mock_create_app, mock_run_in_thread,
+    ):
+        """Source videos must go through Synology's index first."""
+        from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
+        from infrastructure.metadata.synoindex_metadata_reader import (
+            SynoIndexMetadataReader,
+        )
+
+        self._run_main(
+            mock_config, mock_logger, mock_hardware_info, mock_settings_repo, mock_sleep
+        )
+
+        reader = mock_process_use_case.call_args.kwargs["metadata_reader"]
+        assert isinstance(reader, ChainedMetadataReader)
+        assert isinstance(reader.readers[0], SynoIndexMetadataReader)
+
+    def test_output_reader_is_ffprobe_alone(
+        self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
+        mock_video_repo, mock_filesystem, mock_hardware_info,
+        mock_transcoder_factory, mock_process_use_case, mock_main_controller,
+        mock_sleep, mock_signal, mock_schedule, mock_run_processing,
+        mock_build_routers, mock_create_app, mock_run_in_thread,
+    ):
+        """Reading the output through Synology's index is the stale-resolution defect."""
+        from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
+        from infrastructure.metadata.ffprobe_metadata_reader import FFprobeMetadataReader
+
+        self._run_main(
+            mock_config, mock_logger, mock_hardware_info, mock_settings_repo, mock_sleep
+        )
+
+        reader = mock_process_use_case.call_args.kwargs["output_metadata_reader"]
+        assert isinstance(reader, FFprobeMetadataReader)
+        assert not isinstance(reader, ChainedMetadataReader)
+
+    def test_readers_are_distinct_collaborators(
+        self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
+        mock_video_repo, mock_filesystem, mock_hardware_info,
+        mock_transcoder_factory, mock_process_use_case, mock_main_controller,
+        mock_sleep, mock_signal, mock_schedule, mock_run_processing,
+        mock_build_routers, mock_create_app, mock_run_in_thread,
+    ):
+        """The ffprobe instance is shared, but the source reader is not the output one."""
+        self._run_main(
+            mock_config, mock_logger, mock_hardware_info, mock_settings_repo, mock_sleep
+        )
+
+        kwargs = mock_process_use_case.call_args.kwargs
+        assert kwargs["metadata_reader"] is not kwargs["output_metadata_reader"]
+        assert kwargs["metadata_reader"].readers[-1] is kwargs["output_metadata_reader"]

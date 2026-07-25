@@ -6,6 +6,11 @@ class AppLogger(ABC):
     """Interface for application logging."""
 
     @abstractmethod
+    def debug(self, msg: str, *args, **kwargs) -> None:
+        """Logs a diagnostic message, hidden unless LOGGER_LEVEL is DEBUG."""
+        pass  # pragma: no cover
+
+    @abstractmethod
     def info(self, msg: str, *args, **kwargs) -> None:
         """Logs an informational message."""
         pass  # pragma: no cover
