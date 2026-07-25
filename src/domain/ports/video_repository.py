@@ -51,6 +51,29 @@ class VideoRepository(ABC):
         pass  # pragma: no cover
 
     @abstractmethod
+    def update_transcoded_metadata(
+        self, original_path: str, width: int, height: int, codec: str
+    ) -> bool:
+        """
+        Corrects the recorded description of an already transcoded output file.
+
+        For records whose stored resolution or codec no longer match the file on
+        disk, but whose file is correct — re-encoding those would be wasteful.
+        Only acts on records whose current status is COMPLETED.
+
+        Args:
+            original_path: Path to the original video
+            width: Measured width of the transcoded file
+            height: Measured height of the transcoded file
+            codec: Measured video codec of the transcoded file
+
+        Returns:
+            True if the record was updated, False if it did not exist or was not
+            in COMPLETED status.
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
     def reset_to_pending(self, original_path: str) -> bool:
         """
         Resets a transcoding to PENDING status, clearing any error message.

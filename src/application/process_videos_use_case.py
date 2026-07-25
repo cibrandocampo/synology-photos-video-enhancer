@@ -20,6 +20,77 @@ from application.process_result import ProcessResult
 from domain.models.app_config import AudioConfig, VideoConfig
 
 
+def _orientation_and_target(
+    video_track: VideoTrack, video_config: VideoConfig
+) -> tuple[str, int]:
+    """Returns the orientation label and the height the configuration asks for."""
+    if video_track.height >= video_track.width:
+        # A vertical video is scaled to the configured width, so both orientations
+        # end up with a comparable amount of detail on their longest side.
+        return "Vertical", video_config.width
+    return "Horizontal", video_config.height
+
+
+def calculate_output_height(video_track: VideoTrack, video_config: VideoConfig) -> int:
+    """
+    Calculates the output height for a source, never above the source height.
+
+    Kept at module level so maintenance tooling can apply the same rule without
+    building a use case. Two copies of this rule would drift apart, and the whole
+    point of the audit that produced it was that geometry decisions must be made
+    in exactly one place.
+
+    Args:
+        video_track: Video track of the source
+        video_config: Output configuration in force
+
+    Returns:
+        Output height to use for transcoding
+    """
+    _, target_height = _orientation_and_target(video_track, video_config)
+
+    # Enlarging a video costs space and gains no detail. This also bounds the
+    # damage should the source geometry ever be misread again.
+    if video_track.height and target_height > video_track.height:
+        return video_track.height
+
+    return target_height
+
+
+def calculate_output_framerate(original_framerate: int) -> float:
+    """
+    Calculates the output framerate for a source.
+
+    Args:
+        original_framerate: Original video framerate
+
+    Returns:
+        Output framerate, decimal for NTSC rates.
+    """
+    closest_fps = FrameRate.from_int(original_framerate)
+
+    return FrameRate.get_framerate_for_light_videos(closest_fps).to_float()
+
+
+def calculate_output_audio_channels(
+    original_channels: int, audio_config: AudioConfig
+) -> int:
+    """
+    Calculates the output channel count for a source.
+
+    Args:
+        original_channels: Number of channels in the source
+        audio_config: Output configuration in force
+
+    Returns:
+        Channel count to use, never above the source's own.
+    """
+    if original_channels < audio_config.channels:
+        return original_channels
+
+    return audio_config.channels
+
+
 class ProcessVideosUseCase:
     """Use case for processing videos - orchestrates the complete workflow."""
 
@@ -260,7 +331,7 @@ class ProcessVideosUseCase:
 
     def _calculate_output_height(self, video_track: VideoTrack) -> int:
         """
-        Calculates the output height based on video orientation.
+        Calculates the output height based on video orientation, and logs it.
 
         Args:
             video_track: Video track with width and height information
@@ -268,32 +339,26 @@ class ProcessVideosUseCase:
         Returns:
             Output height to use for transcoding, never above the source height
         """
+        orientation, target_height = _orientation_and_target(
+            video_track, self.video_config
+        )
+        output_height = calculate_output_height(video_track, self.video_config)
 
-        if video_track.height >= video_track.width:
-            target_height = self.video_config.width
-            orientation = "Vertical"
-        else:
-            target_height = self.video_config.height
-            orientation = "Horizontal"
-
-        # Enlarging a video costs space and gains no detail. This also bounds the
-        # damage should the source geometry ever be misread again.
-        if video_track.height and target_height > video_track.height:
+        if output_height != target_height:
             self.logger.info(
                 f"{orientation} video ({video_track.resolution}) - Source shorter than "
-                f"target, capping output height at {video_track.height}px"
+                f"target, capping output height at {output_height}px"
             )
-            return video_track.height
+        else:
+            self.logger.info(
+                f"{orientation} video ({video_track.resolution}) - Output height: {output_height}px"
+            )
 
-        self.logger.info(
-            f"{orientation} video ({video_track.resolution}) - Output height: {target_height}px"
-        )
-        return target_height
+        return output_height
 
     def _calculate_output_audio_channels(self, original_channels: int) -> int:
         """
-        Calculates the output audio channels based on original and configuration.
-
+        Calculates the output audio channels, and logs it.
 
         Args:
             original_channels: Number of channels in the original video
@@ -301,20 +366,19 @@ class ProcessVideosUseCase:
         Returns:
             Number of audio channels to use for transcoding
         """
-        if original_channels < self.audio_config.channels:
-            self.logger.info(
-                f"Audio channels: {original_channels} -> Output channels: {original_channels}"
-            )
-            return original_channels
+        output_channels = calculate_output_audio_channels(
+            original_channels, self.audio_config
+        )
 
         self.logger.info(
-            f"Audio channels: {original_channels} -> Output channels: {self.audio_config.channels}"
+            f"Audio channels: {original_channels} -> Output channels: {output_channels}"
         )
-        return self.audio_config.channels
+
+        return output_channels
 
     def _calculate_output_framerate(self, original_framerate: int) -> float:
         """
-        Calculates the output framerate based on the original framerate.
+        Calculates the output framerate, and logs it.
 
         Args:
             original_framerate: Original video framerate (as integer)
@@ -322,12 +386,7 @@ class ProcessVideosUseCase:
         Returns:
             Output framerate to use for transcoding (as float, can be decimal for NTSC rates)
         """
-        # Find the closest FrameRate enum value
-        closest_fps = FrameRate.from_int(original_framerate)
-
-        # Get framerate optimized for light videos
-        output_fps = FrameRate.get_framerate_for_light_videos(closest_fps)
-        output_framerate = output_fps.to_float()
+        output_framerate = calculate_output_framerate(original_framerate)
 
         self.logger.info(
             f"Framerate: {original_framerate}fps - Output framerate: {output_framerate}fps"

@@ -116,3 +116,17 @@ class TestDatabaseConnection:
         
         assert conn.has_all_tables() is True
 
+
+
+class TestDispose:
+    """Short-lived tooling must be able to release the connection pool."""
+
+    def test_dispose_closes_pooled_connections(self, temp_db_path):
+        connection = DatabaseConnection(DatabaseConfig(path=temp_db_path), Mock())
+        connection.initialize()
+        connection.get_session().close()
+
+        connection.dispose()
+
+        # A disposed pool builds a fresh connection on next use rather than raising.
+        assert connection.get_session().is_active
