@@ -90,6 +90,35 @@ class FFmpegTranscoder(Transcoder):
             self.logger.warning(error_output)
             return False
 
+    @staticmethod
+    def _rational(framerate) -> str:
+        """
+        Renders a frame rate as the exact `numerator/denominator` FFmpeg accepts.
+
+        The members are stored as fractions, so an NTSC rate is written as
+        `30000/1001`. Rendering it as a decimal would leave FFmpeg to re-derive a
+        rational from a rounded number, and truncating it to an integer — which is
+        what this code used to do — turned every 29.97 target into 29.
+        """
+        value = framerate.value
+        return f"{value.numerator}/{value.denominator}"
+
+    def _framerate_arguments(self) -> List[str]:
+        """Returns the `-r` arguments, or none at all when passing the source through."""
+        framerate = self.transcoding.configuration.video_framerate
+        if framerate is None:
+            return []
+
+        return ["-r", self._rational(framerate)]
+
+    def _fps_mode(self) -> str:
+        """Chooses FFmpeg's frame-rate mode, the modern replacement for `-vsync`."""
+        return (
+            "passthrough"
+            if self.transcoding.configuration.video_framerate is None
+            else "cfr"
+        )
+
     def _build_ffmpeg_command(self) -> List[str]:
         """
         Builds ffmpeg command for transcoding using configuration from Transcoding object.
@@ -140,8 +169,19 @@ class FFmpegTranscoder(Transcoder):
         # Add vpp_qsv only if scaling or framerate change is needed
         vf_parts = ["format=nv12", "hwupload=extra_hw_frames=64"]
         # Add vpp_qsv for scaling/framerate if needed
+        # The QSV filter carries the rate itself rather than taking -r. Omitting
+        # `framerate=` leaves the source cadence untouched, which is what a
+        # variable-rate source needs.
+        # PENDING HARDWARE VERIFICATION (T023): whether vpp_qsv accepts a rational
+        # and how it behaves without `framerate=` can only be settled on the NAS.
+        qsv_framerate = (
+            f"framerate={self._rational(config.video_framerate)}:"
+            if config.video_framerate is not None
+            else ""
+        )
         vf_parts.append(
-            f"vpp_qsv=framerate={int(config.video_framerate)}:h={config.video_height}:w=trunc(oh*dar/2)*2,setsar=1"
+            f"vpp_qsv={qsv_framerate}h={config.video_height}:"
+            f"w=trunc(oh*dar/2)*2,setsar=1"
         )
         vf = ",".join(vf_parts)
         cmd_parts.extend(["-vf", vf])
@@ -158,7 +198,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-maxrate", f"{config.video_bitrate}k"])
 
         # Common flags
-        cmd_parts.extend(["-vsync", "cfr"])
+        cmd_parts.extend(["-fps_mode", self._fps_mode()])
         cmd_parts.extend(["-sar", "1"])
         cmd_parts.extend(["-movflags", "+faststart"])
         cmd_parts.extend(
@@ -188,7 +228,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-vf", f"scale_vaapi=w=-2:h={config.video_height}"])
 
         # Framerate
-        cmd_parts.extend(["-r", str(int(config.video_framerate))])
+        cmd_parts.extend(self._framerate_arguments())
 
         # Video encoder
         cmd_parts.extend(["-c:v", self.video_encoder])
@@ -202,7 +242,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-maxrate", f"{config.video_bitrate}k"])
 
         # Common flags
-        cmd_parts.extend(["-vsync", "cfr"])
+        cmd_parts.extend(["-fps_mode", self._fps_mode()])
         cmd_parts.extend(["-sar", "1"])
         cmd_parts.extend(["-movflags", "+faststart"])
         cmd_parts.extend(
@@ -225,7 +265,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-vf", f"scale=w=-2:h={config.video_height}"])
 
         # Framerate
-        cmd_parts.extend(["-r", str(int(config.video_framerate))])
+        cmd_parts.extend(self._framerate_arguments())
 
         # Video encoder (output) with pixel format
         cmd_parts.extend(["-c:v", self.video_encoder])
@@ -237,7 +277,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-bufsize", f"{config.video_bitrate * 2}k"])
 
         # Common flags
-        cmd_parts.extend(["-vsync", "cfr"])
+        cmd_parts.extend(["-fps_mode", self._fps_mode()])
         cmd_parts.extend(["-sar", "1"])
 
         return cmd_parts
@@ -255,7 +295,7 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-vf", f"scale=w=-2:h={config.video_height}"])
 
         # Framerate
-        cmd_parts.extend(["-r", str(int(config.video_framerate))])
+        cmd_parts.extend(self._framerate_arguments())
 
         # Video encoder (software)
         cmd_parts.extend(["-c:v", self.video_encoder])
@@ -268,6 +308,9 @@ class FFmpegTranscoder(Transcoder):
         cmd_parts.extend(["-b:v", f"{config.video_bitrate}k"])
 
         # Common flags
+        # This path had no frame-rate mode at all and relied on FFmpeg's default,
+        # which leaves passthrough down to inference rather than instruction.
+        cmd_parts.extend(["-fps_mode", self._fps_mode()])
         cmd_parts.extend(["-movflags", "+faststart"])
 
         return cmd_parts

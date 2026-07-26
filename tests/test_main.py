@@ -321,8 +321,16 @@ class TestCompositionRootWiring:
         mock_sleep, mock_signal, mock_schedule, mock_run_processing,
         mock_build_routers, mock_create_app, mock_run_in_thread,
     ):
-        """Source videos must go through Synology's index first."""
+        """Source videos must be probed first, with Synology's index as the fallback.
+
+        The order is a capability question. The index stores only the nominal frame
+        rate, so a constant 30 fps source and a variable-rate one both read `30 1`;
+        the pipeline now treats those two differently, and only ffprobe can tell them
+        apart. Restoring the old order silently disables that distinction, which is
+        why the position of each reader is asserted rather than merely their presence.
+        """
         from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
+        from infrastructure.metadata.ffprobe_metadata_reader import FFprobeMetadataReader
         from infrastructure.metadata.synoindex_metadata_reader import (
             SynoIndexMetadataReader,
         )
@@ -333,7 +341,8 @@ class TestCompositionRootWiring:
 
         reader = mock_process_use_case.call_args.kwargs["metadata_reader"]
         assert isinstance(reader, ChainedMetadataReader)
-        assert isinstance(reader.readers[0], SynoIndexMetadataReader)
+        assert isinstance(reader.readers[0], FFprobeMetadataReader)
+        assert isinstance(reader.readers[1], SynoIndexMetadataReader)
 
     def test_output_reader_is_ffprobe_alone(
         self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
@@ -368,4 +377,27 @@ class TestCompositionRootWiring:
 
         kwargs = mock_process_use_case.call_args.kwargs
         assert kwargs["metadata_reader"] is not kwargs["output_metadata_reader"]
-        assert kwargs["metadata_reader"].readers[-1] is kwargs["output_metadata_reader"]
+        assert kwargs["metadata_reader"].readers[0] is kwargs["output_metadata_reader"]
+
+    def test_a_missing_dri_device_is_warned_about(
+        self, mock_config, mock_logger, mock_path, mock_db, mock_settings_repo,
+        mock_video_repo, mock_filesystem, mock_hardware_info,
+        mock_transcoder_factory, mock_process_use_case, mock_main_controller,
+        mock_sleep, mock_signal, mock_schedule, mock_run_processing,
+        mock_build_routers, mock_create_app, mock_run_in_thread,
+    ):
+        """An Intel or AMD CPU with no /dev/dri means silent software encoding.
+
+        Nothing fails when the device is absent — the run just becomes many times
+        slower, which is exactly the kind of problem that goes unnoticed without a
+        line in the log.
+        """
+        mock_path.return_value.exists.return_value = False
+
+        self._run_main(
+            mock_config, mock_logger, mock_hardware_info, mock_settings_repo, mock_sleep
+        )
+
+        logger = mock_logger.get_logger.return_value
+        warnings = [str(call.args[0]) for call in logger.warning.call_args_list]
+        assert any("DRI device not found" in warning for warning in warnings)

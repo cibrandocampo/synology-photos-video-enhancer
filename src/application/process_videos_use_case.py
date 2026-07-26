@@ -57,19 +57,38 @@ def calculate_output_height(video_track: VideoTrack, video_config: VideoConfig) 
     return target_height
 
 
-def calculate_output_framerate(original_framerate: int) -> float:
+def calculate_output_framerate(video_track: VideoTrack) -> Optional[FrameRate]:
     """
-    Calculates the output framerate for a source.
+    Chooses the output frame rate, or None to pass the source cadence through.
 
     Args:
-        original_framerate: Original video framerate
+        video_track: Video track of the source
 
     Returns:
-        Output framerate, decimal for NTSC rates.
+        Target frame rate, or None when the source cadence must be preserved.
     """
-    closest_fps = FrameRate.from_int(original_framerate)
+    if video_track.is_variable_framerate:
+        # The camera spent frames only where there was motion. Forcing a constant
+        # rate would either duplicate or drop them, undoing that on purpose.
+        return None
 
-    return FrameRate.get_framerate_for_light_videos(closest_fps).to_float()
+    if video_track.framerate <= 0:
+        # The cadence could not be measured. Imposing one would be a guess, and
+        # guessing about frame rates is what this whole area was fixed for.
+        return None
+
+    target = FrameRate.get_framerate_for_light_videos(
+        FrameRate.from_rate(video_track.framerate)
+    )
+    if target.to_float() > video_track.framerate:
+        # Never produce more frames than the source has, the same rule the output
+        # height follows. Passing the cadence through preserves the source rate
+        # exactly, which a standard rate cannot always express: a 29 fps source
+        # stays 29, rather than gaining duplicated frames at 29.97 or losing real
+        # ones at 25.
+        return None
+
+    return target
 
 
 def calculate_output_audio_channels(
@@ -244,9 +263,7 @@ class ProcessVideosUseCase:
         output_height = self._calculate_output_height(original_video.video_track)
 
         # Calculate output framerate based on original framerate
-        framerate = self._calculate_output_framerate(
-            original_video.video_track.framerate
-        )
+        framerate = self._calculate_output_framerate(original_video.video_track)
 
         audio_channels = self._calculate_output_audio_channels(
             original_video.audio_track.channels
@@ -376,21 +393,37 @@ class ProcessVideosUseCase:
 
         return output_channels
 
-    def _calculate_output_framerate(self, original_framerate: int) -> float:
+    def _calculate_output_framerate(
+        self, video_track: VideoTrack
+    ) -> Optional[FrameRate]:
         """
-        Calculates the output framerate, and logs it.
+        Chooses the output framerate, and logs the decision.
 
         Args:
-            original_framerate: Original video framerate (as integer)
+            video_track: Video track of the source
 
         Returns:
-            Output framerate to use for transcoding (as float, can be decimal for NTSC rates)
+            Target frame rate, or None to pass the source cadence through
         """
-        output_framerate = calculate_output_framerate(original_framerate)
+        output_framerate = calculate_output_framerate(video_track)
 
-        self.logger.info(
-            f"Framerate: {original_framerate}fps - Output framerate: {output_framerate}fps"
-        )
+        if output_framerate is None:
+            reason = (
+                "variable source"
+                if video_track.is_variable_framerate
+                else "no usable source rate"
+                if video_track.framerate <= 0
+                else "no standard rate at or below the source"
+            )
+            self.logger.info(
+                f"Framerate: {video_track.framerate}fps - Passing the source "
+                f"cadence through ({reason})"
+            )
+        else:
+            self.logger.info(
+                f"Framerate: {video_track.framerate}fps - Output framerate: "
+                f"{output_framerate.to_float()}fps"
+            )
 
         return output_framerate
 

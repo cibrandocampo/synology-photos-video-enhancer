@@ -12,6 +12,7 @@ from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.constants.audio import AudioCodec
 from domain.constants.container import ContainerFormat
+from domain.constants.framerate import FrameRate
 from domain.constants.hardware import HardwareBackend
 from infrastructure.transcoder.ffmpeg_transcoder import FFmpegTranscoder
 
@@ -364,3 +365,107 @@ class TestFFmpegTranscoder:
         )
 
         assert transcoder.hardware_backend == HardwareBackend.VAAPI
+
+
+class TestFramerateArguments:
+    """The exact rational must reach FFmpeg, and passthrough must ask for nothing.
+
+    Truncating with int() is what turned every 29.97 target into `-r 29`; the four
+    builders are asserted individually because each one assembles its command
+    separately and a fix applied to three of them would look green.
+    """
+
+    def _transcoding(self, framerate, profile=VideoProfile.HIGH):
+        return Transcoding(
+            original_video=Video(
+                path="/test/original.mp4",
+                video_track=VideoTrack(
+                    width=1920, height=1080, codec_name="h264", framerate=30
+                ),
+                audio_track=AudioTrack(),
+                container=Container(format="mp4"),
+            ),
+            transcoded_video=Video(
+                path="/test/out.mp4",
+                video_track=VideoTrack(
+                    width=1280, height=720, codec_name="h264", framerate=30
+                ),
+                audio_track=AudioTrack(),
+                container=Container(format="mp4"),
+            ),
+            configuration=TranscodingConfiguration(
+                video_codec=VideoCodec.H264,
+                video_profile=profile,
+                video_height=720,
+                video_framerate=framerate,
+                video_bitrate=2048,
+                audio_codec=AudioCodec.AAC,
+                audio_profile=None,
+                audio_channels=2,
+                audio_bitrate=128,
+                container=ContainerFormat.MP4,
+                execution_threads=2,
+            ),
+            status=TranscodingStatus.PENDING,
+        )
+
+    def _command(self, framerate, backend, profile=VideoProfile.HIGH):
+        hardware = Mock()
+        hardware.video_acceleration = None
+        transcoder = FFmpegTranscoder(
+            self._transcoding(framerate, profile), hardware, Mock()
+        )
+        transcoder.hardware_backend = backend
+        return transcoder._build_ffmpeg_command()
+
+    BACKENDS = [
+        HardwareBackend.QSV,
+        HardwareBackend.VAAPI,
+        HardwareBackend.V4L2M2M,
+        HardwareBackend.NONE,
+    ]
+
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_exact_rational_reaches_ffmpeg(self, backend):
+        command = " ".join(self._command(FrameRate.FPS_29_97, backend))
+
+        assert "30000/1001" in command
+        assert "-r 29 " not in command + " "
+        assert "-r 30 " not in command + " "
+
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_passthrough_asks_for_no_rate(self, backend):
+        command = self._command(None, backend)
+
+        assert "-r" not in command
+        assert "passthrough" in " ".join(command)
+
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_chosen_rate_uses_constant_mode(self, backend):
+        command = self._command(FrameRate.FPS_25, backend)
+
+        assert "cfr" in " ".join(command)
+        assert "25/1" in " ".join(command)
+
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_no_builder_uses_the_deprecated_vsync(self, backend):
+        assert "-vsync" not in self._command(FrameRate.FPS_30, backend)
+
+    def test_qsv_filter_carries_the_rate_itself(self):
+        command = " ".join(self._command(FrameRate.FPS_29_97, HardwareBackend.QSV))
+
+        assert "vpp_qsv=framerate=30000/1001:h=720" in command
+
+    def test_qsv_filter_omits_the_rate_for_passthrough(self):
+        command = " ".join(self._command(None, HardwareBackend.QSV))
+
+        assert "vpp_qsv=h=720" in command
+        assert "framerate=" not in command
+
+    @pytest.mark.parametrize("backend", BACKENDS)
+    def test_a_codec_without_profiles_emits_none(self, backend):
+        """Profile is optional, and every builder guards on it independently."""
+        command = self._command(FrameRate.FPS_30, backend, profile=None)
+
+        assert "-profile:v" not in command
+        assert "-fps_mode" in command

@@ -70,6 +70,71 @@ spaces were never affected.
 
 ---
 
+## Re-encoded videos report a different frame rate than before
+
+**Applies to**: upgrades to **4.3.0 or later**.
+
+### What you would see
+
+Videos re-encoded after the upgrade report frame rates they did not report before. Clips that used to read
+30 fps now read 29.97. Some report no single rate at all. If you run the repair tool, it queues far more
+files than it did on 4.2.4 — potentially most of your library.
+
+### What happened
+
+Frame rate handling was wrong in three places at once, and all three are fixed together.
+
+Synology's index stores the frame rate as a **numerator and a denominator** in two adjacent fields. Earlier
+versions read the numerator alone and rounded it, so an NTSC video storing `30000 1001` — a rate of
+29.97 fps — was treated as 30. In the production library measured for this change, 41% of indexed videos
+carry such a fractional rate. The target rate was then truncated to a whole number on its way to FFmpeg,
+turning 29.97 into 29, and a source whose rate could not be read at all was simply assumed to be 30.
+
+The practical effect of encoding a 29.97 fps source at 30 is about one duplicated frame every thirty
+seconds, which drifts audio against video over a long clip.
+
+Two behaviours are new rather than merely corrected:
+
+- **The output rate is never higher than the source's.** A source at a rate with no standard equivalent at
+  or below it keeps its own rate instead of being pushed to the nearest one.
+- **Variable-rate sources keep their variable cadence.** Screen recordings and phone clips that spend frames
+  only where there is motion are no longer forced to a constant rate. Doing so either duplicated frames the
+  camera chose not to record or discarded frames it chose to keep — larger either way. Detecting this
+  requires probing the file, so source videos are now probed first and Synology's index is the fallback.
+
+See [Supported formats](supported-formats.md) for the resulting rules.
+
+### What to do
+
+**Nothing is required.** Existing files keep working; they are simply encoded at a slightly different rate
+than they would be today. If you never run the repair tool, nothing is re-encoded.
+
+If you want the library brought in line, the repair tool now judges the frame rate as well as the geometry:
+
+```bash
+docker exec synology-photos-video-enhancer \
+  python /app/scripts/repair_transcoding_metadata.py --verbose
+```
+
+**Read the dry-run summary before applying it.** Expect a much larger re-encode queue than the earlier
+entry on this page describes: that one covered files damaged by a parsing defect, a few dozen in a library
+of thousands. This one covers every file whose frame rate differs from what the current rules would
+produce. Measured against a real library of 1356 transcoded videos, that was **26% of the files whose
+frame rate could be judged**, or 17% of the library as a whole — dominated by 59.94 fps phone recordings
+that were previously halved to a flat 30 fps instead of 29.97. Your proportion depends on how many of your
+videos come from phones. Each queued file costs a full transcode, and the queue is worked through by the
+normal processing cycle — on a low-power NAS that is measured in days, not minutes.
+
+**When to run it is an operational choice, not a correctness one.** The existing files are watchable. Use
+`--limit N` to work through the library in batches if you would rather not hand the NAS a queue of
+thousands at once.
+
+Variable-rate sources are exempt from the frame-rate comparison, because there is no single rate their
+output should carry. When such a record is queued for another reason, the summary says so rather than
+leaving you to wonder why one axis was not judged.
+
+---
+
 ## More failures reported after upgrading
 
 **Applies to**: upgrades to **4.2.3 or later**.

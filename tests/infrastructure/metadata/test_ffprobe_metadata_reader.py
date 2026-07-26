@@ -245,32 +245,95 @@ class TestUnusableGeometry:
 
 
 class TestFramerate:
-    """ffprobe reports rates as fractions."""
+    """The nominal rate is what the file declares; the average is what it measured."""
 
-    def test_ntsc_rate_is_rounded(self, logger):
-        stream = video_stream(avg_frame_rate="30000/1001")
+    def framerate_of(self, logger, **overrides):
+        stream = video_stream(**overrides)
         reader, _ = reader_for(logger, streams=[stream])
+        return reader.read("/media/album/video.mp4").video_track.framerate
 
-        assert reader.read("/media/album/video.mp4").video_track.framerate == 30
+    def test_nominal_rate_is_preferred_over_the_average(self, logger):
+        """For a variable source the average is an artefact of the content."""
+        rate = self.framerate_of(
+            logger, r_frame_rate="30000/1001", avg_frame_rate="121500/2647"
+        )
 
-    def test_falls_back_to_base_rate(self, logger):
-        """Streams without an average rate report 0/0 for it."""
-        stream = video_stream(avg_frame_rate="0/0", r_frame_rate="25/1")
-        reader, _ = reader_for(logger, streams=[stream])
+        assert rate == pytest.approx(30000 / 1001)
 
-        assert reader.read("/media/album/video.mp4").video_track.framerate == 25
+    def test_ntsc_rate_is_not_rounded(self, logger):
+        """29.97 must survive; rounding is what the enum's fractions prevent."""
+        rate = self.framerate_of(
+            logger, r_frame_rate="30000/1001", avg_frame_rate="30000/1001"
+        )
+
+        assert rate != 30
+        assert rate == pytest.approx(29.97002997002997)
+
+    def test_falls_back_to_the_average_when_nominal_is_unusable(self, logger):
+        rate = self.framerate_of(logger, r_frame_rate="0/0", avg_frame_rate="25/1")
+
+        assert rate == 25
 
     def test_both_rates_unusable_yields_zero(self, logger):
-        stream = video_stream(avg_frame_rate="0/0", r_frame_rate="0/0")
-        reader, _ = reader_for(logger, streams=[stream])
-
-        assert reader.read("/media/album/video.mp4").video_track.framerate == 0
+        assert self.framerate_of(logger, r_frame_rate="0/0", avg_frame_rate="0/0") == 0
 
     def test_malformed_rate_does_not_raise(self, logger):
-        stream = video_stream(avg_frame_rate="not/a/rate", r_frame_rate=None)
-        reader, _ = reader_for(logger, streams=[stream])
+        assert self.framerate_of(
+            logger, r_frame_rate="not/a/rate", avg_frame_rate=None
+        ) == 0
 
-        assert reader.read("/media/album/video.mp4").video_track.framerate == 0
+
+class TestVariableFramerate:
+    """Distinguishing a variable source is the only thing ffprobe can do that
+    Synology's index cannot: the index stores one nominal rate, so a constant 30 fps
+    video and a variable one are identical in it.
+
+    The 1% threshold comes from measuring 900 real library videos: the relative
+    difference clusters densely below 0.5% and again above 2%, with a trough between.
+    """
+
+    def variability_of(self, logger, **overrides):
+        stream = video_stream(**overrides)
+        reader, _ = reader_for(logger, streams=[stream])
+        return reader.read("/media/album/video.mp4").video_track.is_variable_framerate
+
+    def test_identical_rates_are_constant(self, logger):
+        assert self.variability_of(
+            logger, r_frame_rate="30/1", avg_frame_rate="30/1"
+        ) is False
+
+    def test_container_quirk_below_the_threshold_is_constant(self, logger):
+        """A real library file: 30.004 average against a 30 nominal, 0.013% apart."""
+        assert self.variability_of(
+            logger, r_frame_rate="30/1", avg_frame_rate="16380000/545929"
+        ) is False
+
+    def test_clearly_variable_source(self, logger):
+        """A real library file: nominally 59.94, averaging 19.98."""
+        assert self.variability_of(
+            logger, r_frame_rate="60000/1001", avg_frame_rate="20000/1001"
+        ) is True
+
+    def test_just_above_the_threshold_is_variable(self, logger):
+        assert self.variability_of(
+            logger, r_frame_rate="100/1", avg_frame_rate="98/1"
+        ) is True
+
+    def test_just_below_the_threshold_is_constant(self, logger):
+        assert self.variability_of(
+            logger, r_frame_rate="100/1", avg_frame_rate="99.5/1"
+        ) is False
+
+    def test_missing_average_is_not_variable(self, logger):
+        """Unknown must not disable the reduction rule for high-rate sources."""
+        assert self.variability_of(
+            logger, r_frame_rate="60/1", avg_frame_rate="0/0"
+        ) is False
+
+    def test_missing_nominal_is_not_variable(self, logger):
+        assert self.variability_of(
+            logger, r_frame_rate="0/0", avg_frame_rate="60/1"
+        ) is False
 
 
 class TestFailureModes:

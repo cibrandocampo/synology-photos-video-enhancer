@@ -125,6 +125,7 @@ For the full list of dashboard env vars (port, cookie flags, etc.) see the **[Co
 Coming from an older version? The **[Upgrading Guide](https://github.com/cibrandocampo/synology-photos-video-enhancer/blob/master/docs/upgrading.md)** covers what needs your attention, each entry starting from something you can observe:
 
 - Odd resolutions such as `44100x2` or `2x1280` in the dashboard — databases written by 4.2.2 or earlier, and how to repair them.
+- Re-encoded videos reporting a different frame rate from 4.3.0 — NTSC sources keep 29.97 instead of rounding to 30, and variable-rate sources keep their cadence.
 - More failures reported after upgrading to 4.2.3 or later — why that is intended.
 - Coming from the Grafana-based dashboard — replaced by the built-in one in 4.0.0.
 

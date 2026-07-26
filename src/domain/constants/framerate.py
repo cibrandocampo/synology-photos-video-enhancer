@@ -27,30 +27,33 @@ class FrameRate(Enum):
         return float(self.value)
     
     @classmethod
-    def from_int(cls, framerate: int) -> "FrameRate":
+    def from_rate(cls, framerate: float) -> "FrameRate":
         """
-        Finds the closest FrameRate enum value to the given integer framerate.
-        
+        Finds the closest FrameRate to a measured rate.
+
+        Takes the exact value: 29.97 resolves to FPS_29_97 rather than being
+        rounded to 30 first. The members are stored as exact fractions for
+        precisely this reason, so quantising the input before comparing would
+        discard what they exist to represent.
+
         Args:
-            framerate: Integer framerate value
-            
+            framerate: Measured frames per second, fractional rates included
+
         Returns:
             Closest FrameRate enum value, or FPS_30 as default
         """
         if framerate <= 0:
             return cls.FPS_30
-        
-        # Find the closest match by comparing float values
-        framerate_float = float(framerate)
+
         closest = cls.FPS_30
-        min_diff = abs(framerate_float - cls.FPS_30.to_float())
-        
+        min_diff = abs(framerate - cls.FPS_30.to_float())
+
         for fps in cls:
-            diff = abs(framerate_float - fps.to_float())
+            diff = abs(framerate - fps.to_float())
             if diff < min_diff:
                 min_diff = diff
                 closest = fps
-        
+
         return closest
     
     @classmethod

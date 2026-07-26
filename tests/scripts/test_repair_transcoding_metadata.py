@@ -49,11 +49,12 @@ class _StubReader(VideoMetadataReader):
 
 
 def video(path: str, width: int, height: int, codec: str = "h264",
-          framerate: int = 25, channels: int = 2) -> Video:
+          framerate: float = 25, channels: int = 2, variable: bool = False) -> Video:
     return Video(
         path=path,
         video_track=VideoTrack(
-            width=width, height=height, codec_name=codec, framerate=framerate
+            width=width, height=height, codec_name=codec, framerate=framerate,
+            is_variable_framerate=variable,
         ),
         audio_track=AudioTrack(codec="aac", channels=channels),
         container=Container(format="mp4"),
@@ -269,20 +270,18 @@ class TestClassification:
         assert finding.classification is Classification.NEEDS_REENCODE
         assert "channels" in finding.reason
 
-    def test_ntsc_framerate_is_not_reported_as_damage(
+    def test_ntsc_output_matching_its_target_is_not_damage(
         self, repository, video_config, audio_config
     ):
-        """The command builders pass `-r int(fps)`, so a 29.97 target yields 29.
-
-        Comparing against the exact rate would classify every NTSC output as damaged
-        and queue a mass re-encode of files that are exactly what the pipeline makes.
-        """
+        """An NTSC source now targets 29.97 exactly, and a file at 29.97 matches it."""
         planner = planner_for(
             repository,
             video_config,
             audio_config,
-            source={SOURCE: video(SOURCE, 1920, 1080, framerate=29, channels=2)},
-            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=29, channels=2)},
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=30000 / 1001,
+                                  channels=2)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=30000 / 1001,
+                                  channels=2)},
         )
 
         finding = planner.classify(record(resolution="1280x720"))
@@ -333,6 +332,138 @@ class TestClassification:
         assert "height" in reason
         assert "framerate" in reason
         assert "channels" in reason
+
+    def test_variable_source_is_not_judged_on_framerate(
+        self, repository, video_config, audio_config
+    ):
+        """The output of a variable source has no single rate to be wrong about.
+
+        ffprobe's average over such a file is a property of the content, so comparing
+        it against anything would queue the file on every run, forever.
+        """
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=30, variable=True)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=21.7)},
+        )
+
+        assert planner.classify(record()).classification is Classification.OK
+
+    def test_variable_source_with_a_wrong_height_still_needs_reencode(
+        self, repository, video_config, audio_config
+    ):
+        """Skipping one axis must not blind the other two."""
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1080, 1920, framerate=30, variable=True)},
+            output={OUTPUT: video(OUTPUT, 404, 720, framerate=21.7)},
+        )
+
+        finding = planner.classify(record(resolution="44100x2"))
+
+        assert finding.classification is Classification.NEEDS_REENCODE
+        assert "height" in finding.reason
+        assert "framerate 21.7 !=" not in finding.reason
+
+    def test_the_unjudged_axis_is_named_in_the_reason(
+        self, repository, video_config, audio_config
+    ):
+        """An operator reading the reason must know one axis was left out."""
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1080, 1920, framerate=30, variable=True)},
+            output={OUTPUT: video(OUTPUT, 404, 720, framerate=21.7)},
+        )
+
+        reason = planner.classify(record(resolution="44100x2")).reason
+
+        assert "variable source" in reason
+
+    def test_a_healthy_variable_record_reports_no_skip_note(
+        self, repository, video_config, audio_config
+    ):
+        """The note explains a verdict; with no verdict there is nothing to explain."""
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=30, variable=True)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=21.7)},
+        )
+
+        assert planner.classify(record()).reason == ""
+
+    def test_constant_source_with_a_wrong_framerate_is_still_judged(
+        self, repository, video_config, audio_config
+    ):
+        """The skip is for variable sources alone, not for every passthrough."""
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=25, channels=1)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=30, channels=1)},
+        )
+
+        finding = planner.classify(record())
+
+        assert finding.classification is Classification.NEEDS_REENCODE
+        assert "framerate" in finding.reason
+        assert "variable source" not in finding.reason
+
+    def test_a_passed_through_constant_rate_is_compared_against_the_source(
+        self, repository, video_config, audio_config
+    ):
+        """29 fps has no standard rate at or below it, so the output must stay 29.
+
+        Without this the passthrough branch would leave every such source unjudged,
+        and a file wrongly encoded at 30 would look healthy.
+        """
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=29, channels=1)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=30, channels=1)},
+        )
+
+        finding = planner.classify(record())
+
+        assert finding.classification is Classification.NEEDS_REENCODE
+        assert "framerate" in finding.reason
+
+    def test_a_passed_through_rate_matching_the_source_is_ok(
+        self, repository, video_config, audio_config
+    ):
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=29, channels=1)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=29, channels=1)},
+        )
+
+        assert planner.classify(record()).classification is Classification.OK
+
+    def test_an_unknown_source_rate_is_not_judged(
+        self, repository, video_config, audio_config
+    ):
+        """Zero is 'never measured', not 'zero frames per second'."""
+        planner = planner_for(
+            repository,
+            video_config,
+            audio_config,
+            source={SOURCE: video(SOURCE, 1920, 1080, framerate=0, channels=1)},
+            output={OUTPUT: video(OUTPUT, 1280, 720, framerate=30, channels=1)},
+        )
+
+        assert planner.classify(record()).classification is Classification.OK
 
     def test_missing_output_file(self, repository, video_config, audio_config):
         planner = planner_for(
@@ -663,8 +794,22 @@ class TestCommandLine:
 class TestReaderWiring:
     """The script must measure the way the application does, or it repairs blindly."""
 
-    def test_source_reader_prefers_the_synology_index(self):
+    def test_source_reader_probes_before_consulting_the_index(self):
+        """Only ffprobe reports variability, and the classifier depends on it.
+
+        With the index first, `is_variable_framerate` would always read False and the
+        framerate axis would be judged against an unstable average.
+        """
         from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
+        from infrastructure.metadata.ffprobe_metadata_reader import FFprobeMetadataReader
+        from scripts.repair_transcoding_metadata import build_readers
+
+        source_reader, _ = build_readers(Mock())
+
+        assert isinstance(source_reader, ChainedMetadataReader)
+        assert isinstance(source_reader.readers[0], FFprobeMetadataReader)
+
+    def test_the_synology_index_remains_the_fallback(self):
         from infrastructure.metadata.synoindex_metadata_reader import (
             SynoIndexMetadataReader,
         )
@@ -672,8 +817,7 @@ class TestReaderWiring:
 
         source_reader, _ = build_readers(Mock())
 
-        assert isinstance(source_reader, ChainedMetadataReader)
-        assert isinstance(source_reader.readers[0], SynoIndexMetadataReader)
+        assert isinstance(source_reader.readers[-1], SynoIndexMetadataReader)
 
     def test_output_reader_is_ffprobe_alone(self):
         """Measuring output through Synology's index would read the replaced file."""
@@ -692,7 +836,7 @@ class TestReaderWiring:
         source_reader, output_reader = build_readers(Mock())
 
         assert source_reader is not output_reader
-        assert source_reader.readers[-1] is output_reader
+        assert source_reader.readers[0] is output_reader
 
 
 class TestScriptLocation:

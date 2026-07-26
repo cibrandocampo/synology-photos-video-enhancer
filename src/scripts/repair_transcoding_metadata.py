@@ -55,6 +55,9 @@ from infrastructure.metadata.synoindex_metadata_reader import SynoIndexMetadataR
 
 DEFAULT_DB_PATH = "/app/data/transcodings.db"
 COMPLETED = "completed"
+# Frame rates are compared as floats derived from rationals; an exact equality test
+# would report a file as damaged over the last bits of 30000/1001.
+_RATE_TOLERANCE = 0.01
 
 
 class Classification(str, Enum):
@@ -129,6 +132,7 @@ class RepairPlanner:
             what the pipeline would produce today.
         """
         differences = []
+        skipped = []
 
         expected_height = calculate_output_height(source.video_track, self.video_config)
         if produced.video_track.height != expected_height:
@@ -136,14 +140,29 @@ class RepairPlanner:
                 f"height {produced.video_track.height} != {expected_height}"
             )
 
-        # The command builders pass `-r int(framerate)` to FFmpeg, so the file can
-        # only ever carry the truncated value; comparing against the exact rate
-        # would flag every NTSC output as damaged.
-        expected_framerate = int(calculate_output_framerate(source.video_track.framerate))
-        if produced.video_track.framerate != expected_framerate:
-            differences.append(
-                f"framerate {produced.video_track.framerate} != {expected_framerate}"
+        if source.video_track.is_variable_framerate:
+            # A variable cadence is passed through, so there is no single rate the
+            # output should carry. ffprobe reports the mean over the file, which
+            # describes the content rather than the format and shifts between
+            # measurements — comparing against it would queue the file on every run.
+            skipped.append("framerate not compared (variable source)")
+        else:
+            # The exact rational now reaches FFmpeg, so the produced file carries the
+            # target rate itself rather than a truncated version of it. A constant
+            # source with no standard rate at or below it is passed through, and the
+            # rate it should then carry is its own.
+            expected_framerate = calculate_output_framerate(source.video_track)
+            expected_rate = (
+                expected_framerate.to_float()
+                if expected_framerate is not None
+                else source.video_track.framerate
             )
+            if expected_rate > 0 and (
+                abs(produced.video_track.framerate - expected_rate) > _RATE_TOLERANCE
+            ):
+                differences.append(
+                    f"framerate {produced.video_track.framerate} != {expected_rate}"
+                )
 
         expected_channels = calculate_output_audio_channels(
             source.audio_track.channels, self.audio_config
@@ -152,6 +171,11 @@ class RepairPlanner:
             differences.append(
                 f"channels {produced.audio_track.channels} != {expected_channels}"
             )
+
+        # Naming the unjudged axis only matters once the record is being queued: the
+        # operator reading the reason has to know one axis was not part of the verdict.
+        if differences:
+            differences.extend(skipped)
 
         return differences
 
@@ -261,11 +285,17 @@ def fetch_completed_records(
 
 
 def build_readers(logger: AppLogger):
-    """Builds the same reader chain the application uses."""
+    """Builds the same reader chain the application uses.
+
+    The order matters twice over here. It has to match `main.py` or the script judges
+    files by a different standard than the one that produced them; and the framerate
+    axis can only be skipped for variable-rate sources if the reader that detects
+    variability — ffprobe — is the one consulted first.
+    """
     filesystem = LocalFilesystem(get_video_extensions())
     ffprobe_reader = FFprobeMetadataReader(logger)
     source_reader = ChainedMetadataReader(
-        [SynoIndexMetadataReader(filesystem, logger), ffprobe_reader], logger
+        [ffprobe_reader, SynoIndexMetadataReader(filesystem, logger)], logger
     )
     return source_reader, ffprobe_reader
 

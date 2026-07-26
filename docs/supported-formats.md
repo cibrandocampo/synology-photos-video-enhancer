@@ -65,6 +65,45 @@ original proportions are always preserved.
 Orientation is taken from the video's display geometry, so clips recorded in portrait by a phone — which are
 stored rotated, with the rotation held as metadata — are treated as vertical rather than horizontal.
 
+## Frame Rate
+
+Frame rate is not configurable. It is derived from the source, on the principle that the output should cost
+less to store without looking different.
+
+**Sources at or below 30 fps keep their rate.** A 25 fps clip stays at 25, a 24 fps clip stays at 24. Rates
+that are not whole numbers are preserved exactly: an NTSC source at 29.97 fps comes out at 29.97, not rounded
+to 30. Rounding would add roughly one duplicated frame every thirty seconds and slowly drift audio out of
+sync against the video.
+
+**Higher rates are halved, to the nearest standard rate:**
+
+| Source | Output |
+|--------|--------|
+| 50 fps | 25 fps |
+| 59.94 fps | 29.97 fps |
+| 60 fps | 30 fps |
+| 120 fps | 30 fps |
+| 144 fps | 24 fps |
+| 240 fps | 30 fps |
+
+A 60 fps recording carries twice the frames of a 30 fps one for a difference most people cannot see on a
+phone or a TV at normal playback speed. Halving is where most of the size reduction comes from.
+
+**The output rate is never higher than the source's.** A source at a rate with no standard equivalent at or
+below it — 29 fps, say — keeps its own rate rather than being pushed up to 29.97 or down to 25. There is no
+rate at which inventing frames improves a video.
+
+**Variable-rate sources keep their variable cadence.** Some cameras and most screen recorders spend frames
+only where there is motion, holding a still shot at a low rate and rising during movement. That is a
+deliberate optimisation, and forcing such a video to a constant rate would either duplicate frames it chose
+not to record or discard frames it chose to keep — larger either way, and no better to watch. These files are
+re-encoded at their original cadence.
+
+Whether a source varies its rate can only be determined by probing the file. Synology's index records a
+single nominal rate, so a constant 30 fps video and a variable one look identical in it — which is why the
+tool probes source videos first and falls back to the index. See
+[Synology metadata](synology-metadata.md).
+
 ## Audio Codecs
 
 **Supported Audio Codecs:**

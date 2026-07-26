@@ -127,14 +127,19 @@ def main():
         filesystem = LocalFilesystem(get_video_extensions())
 
         # Metadata readers
-        # Source videos: prefer Synology's index — it is already on disk and stores
-        # display geometry with rotation applied — and probe the file only when the
-        # index is missing or unusable.
+        # Source videos: probe the file first, and fall back to Synology's index.
+        # The order is a capability question, not a preference. The index stores only
+        # the nominal frame rate, so a constant 30 fps video and a variable-rate one
+        # both read `30 1` and are indistinguishable — and the pipeline now treats the
+        # two differently. Only ffprobe can tell them apart.
+        # The cost is bounded: metadata is read only for videos not already recorded
+        # as completed or not_required, so this is one subprocess per *new* video,
+        # not one per video per cycle.
         ffprobe_reader = FFprobeMetadataReader(logger)
         metadata_reader = ChainedMetadataReader(
             [
-                SynoIndexMetadataReader(filesystem, logger),
                 ffprobe_reader,
+                SynoIndexMetadataReader(filesystem, logger),
             ],
             logger,
         )
@@ -248,5 +253,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

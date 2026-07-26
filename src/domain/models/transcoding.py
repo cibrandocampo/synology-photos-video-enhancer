@@ -6,6 +6,7 @@ from typing import Optional, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field
 from domain.constants.audio import AACProfile, AudioCodec
 from domain.constants.container import ContainerFormat
+from domain.constants.framerate import FrameRate
 from domain.constants.video import VideoCodec, VideoProfile
 
 if TYPE_CHECKING:
@@ -26,7 +27,13 @@ class TranscodingConfiguration(BaseModel):
     video_codec: VideoCodec = Field(..., description="Video codec used for transcoding")
     video_profile: Optional[VideoProfile] = Field(default=None, description="Video profile (only for supported codecs)")
     video_height: int = Field(..., description="Output video height in pixels")
-    video_framerate: float = Field(..., description="Video framerate (can be decimal for NTSC rates like 29.97, 59.94, 23.976)")
+    video_framerate: Optional[FrameRate] = Field(
+        default=None,
+        description=(
+            "Target frame rate. None means the source cadence is passed through "
+            "unchanged, which is what a variable-rate source needs."
+        ),
+    )
     video_bitrate: int = Field(..., description="Video bitrate in kbps")
     audio_codec: AudioCodec = Field(..., description="Audio codec used for transcoding")
     audio_profile: Optional[AACProfile] = Field(default=None, description="AAC profile (only for AAC codec)")
