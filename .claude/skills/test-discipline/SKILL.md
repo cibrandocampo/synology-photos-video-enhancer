@@ -58,6 +58,38 @@ If a failure is infra, fix it once at the source (compose file, Dockerfile, pyte
 4. If approved here: apply the fix, keep the test that found it.
 5. If separate: write up the bug, leave the failing test in place, do not comment it out.
 
+## A test can pass for the wrong reason
+
+The riskiest failure mode in this repo is not a test that fails — it is a test that passes without
+pinning what its name claims. `SynoIndexMediaInfo` applies a plausibility gate, and a gate rejects an
+implausible *result* for its own reasons. So a parser-level test can pass against code that does not
+implement the rule at all.
+
+This happened twice in T019, and both tests looked correct:
+
+- `test_zero_denominator_is_rejected` built a `30000/0` record. The gate rejected it because 30000 fps
+  is impossible — not because the zero denominator was handled. Defaulting the denominator to `1` left
+  the test green.
+- `test_missing_denominator_is_rejected` truncated the record before position 36, which also dropped
+  `WIDTH` (39) and `HEIGHT` (40). The gate refused it on geometry before the framerate was reached.
+
+Both survived a mutation that deleted the rule from `Video.from_synology_metadata` — as did the whole
+suite of 737 tests, at 100% statement *and* branch coverage on that file.
+
+Rules that follow from it:
+
+- **Assert a rule where nothing can mask it.** `Video.from_synology_metadata` applies no gate, so the
+  rate is the only thing under test there. Push the assertion down to the layer without the guard.
+- **Choose inputs that are unremarkable except for the thing under test.** `30 0` discriminates;
+  `30000 0` does not, because the numerator is independently rejectable.
+- **Before trusting a new test, break the rule it names and confirm it fails.** Copy `src/` to a
+  scratch directory, invert the rule, run the suite. A test that stays green is decoration.
+- **Coverage is not discrimination.** Branch coverage only proves a line executed. It says nothing
+  about whether any assertion depends on what that line produced.
+- **When a test cannot isolate its target, say so in the docstring** and point at where the rule *is*
+  pinned. A test named for what it actually proves is worth keeping; one named for what it does not is
+  a trap for the next reader.
+
 ## Anti-pattern checklist before declaring done
 
 - [ ] Every test is atomic (one concept).
@@ -66,6 +98,7 @@ If a failure is infra, fix it once at the source (compose file, Dockerfile, pyte
 - [ ] No `pytest.skip`, no commented assertions, no loosened sleeps.
 - [ ] Full suite passes: `make test` (or equivalent docker command) shows zero failures, zero unexpected skips.
 - [ ] Coverage didn't drop on lines I touched. `pytest.ini` produces an HTML report — check it if a regression in coverage is suspected.
+- [ ] Each new test would fail if the rule it names were removed — not merely if the code crashed.
 
 ## Why this matters here
 

@@ -178,13 +178,32 @@ class TestFractionalFramerate:
         assert video.video_track.framerate == expected
 
     def test_zero_denominator_is_rejected(self):
-        """A rate of 30000/0 must not become a plausible-looking 30000 fps."""
-        record = build_record("/media/video.mp4", framerate_num="30000",
+        """A rate of 30/0 must not become a plausible-looking 30 fps.
+
+        The numerator is deliberately one that would pass the plausibility gate on
+        its own. With an implausible numerator the gate rejects the record whether
+        or not the zero denominator is handled at all, so the test would pass
+        against code that defaults the denominator to 1 — pinning nothing.
+        """
+        record = build_record("/media/video.mp4", framerate_num="30",
                               framerate_den="0")
 
         assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
 
-    def test_missing_denominator_is_rejected(self):
+    def test_an_implausible_rate_is_rejected(self):
+        """Reading position 35 alone yielded 30000, which the gate must refuse."""
+        record = build_record("/media/video.mp4", framerate_num="30000",
+                              framerate_den="1")
+
+        assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
+
+    def test_a_truncated_record_is_rejected(self):
+        """Cutting the record at 36 drops the denominator — and width and height.
+
+        The gate refuses it on geometry before the framerate is ever considered, so
+        this pins truncation handling, not the denominator rule. That rule is pinned
+        in `tests/domain/test_models_video.py`, where no gate can mask it.
+        """
         record = build_record("/media/video.mp4", token_count=36)
 
         assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None

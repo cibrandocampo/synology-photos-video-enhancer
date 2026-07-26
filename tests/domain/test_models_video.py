@@ -220,3 +220,73 @@ class TestFractionalFramerate:
         )
 
         assert track.is_variable_framerate is True
+
+
+def _synology_metadata(framerate_num="30", framerate_den="1", size=60):
+    """A metadata list complete enough to be realistic; only the rate fields vary."""
+    metadata = [None] * 60
+    metadata[MetadataIndex.WIDTH] = "1920"
+    metadata[MetadataIndex.HEIGHT] = "1080"
+    metadata[MetadataIndex.VIDEO_CODEC] = "h264"
+    metadata[MetadataIndex.FRAMERATE_NUMERATOR] = framerate_num
+    metadata[MetadataIndex.FRAMERATE_DENOMINATOR] = framerate_den
+    metadata[MetadataIndex.CHANNELS] = "2"
+    metadata[MetadataIndex.CONTAINER] = "mp4"
+    return metadata[:size]
+
+
+class TestDenominatorIsNeverDefaulted:
+    """An unusable denominator yields no rate at all, rather than one made up.
+
+    These assertions live on the model rather than on the parser on purpose. The
+    parser applies a plausibility gate, and a gate rejects an implausible *result*
+    for its own reasons — so a parser-level test can pass against code that defaults
+    a zero denominator to 1, provided the resulting rate happens to look wrong for
+    some other reason. Here there is no gate, so the rate is the only thing under
+    test.
+    """
+
+    def test_a_zero_denominator_yields_no_rate(self):
+        """30/0 is not 30 fps, and it is not 30000 fps either. It is unknown."""
+        video = Video.from_synology_metadata(
+            "/test/video.mp4", _synology_metadata(framerate_den="0")
+        )
+
+        assert video.video_track.framerate == 0
+
+    def test_a_zero_denominator_does_not_yield_the_bare_numerator(self):
+        """Dividing by a defaulted 1 is the specific defect this rule prevents."""
+        video = Video.from_synology_metadata(
+            "/test/video.mp4", _synology_metadata(framerate_num="30", framerate_den="0")
+        )
+
+        assert video.video_track.framerate != 30
+
+    def test_the_geometry_survives_so_the_rate_is_what_is_asserted(self):
+        """Guards the two assertions above against becoming vacuous.
+
+        If width and height were lost along with the denominator, the record would
+        be unusable for reasons that have nothing to do with the framerate, and the
+        assertions would no longer be about the rule they name.
+        """
+        video = Video.from_synology_metadata(
+            "/test/video.mp4", _synology_metadata(framerate_den="0")
+        )
+
+        assert video.video_track.width == 1920
+        assert video.video_track.height == 1080
+
+    def test_an_absent_denominator_yields_no_rate(self):
+        """A record truncated before position 36 has a numerator and nothing to divide by."""
+        video = Video.from_synology_metadata(
+            "/test/video.mp4", _synology_metadata(size=36)
+        )
+
+        assert video.video_track.framerate == 0
+
+    def test_a_non_numeric_denominator_yields_no_rate(self):
+        video = Video.from_synology_metadata(
+            "/test/video.mp4", _synology_metadata(framerate_den="n/a")
+        )
+
+        assert video.video_track.framerate == 0
