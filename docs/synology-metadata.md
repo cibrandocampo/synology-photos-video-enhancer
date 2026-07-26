@@ -73,7 +73,8 @@ Once the path is treated as a single token, the fields this application reads si
 | 32 | Audio bitrate | `256044` |
 | 33 | Total bitrate | `5607669` |
 | 34 | Video bitrate | `5342923` |
-| 35 | Framerate | `30` |
+| 35 | Framerate numerator | `30000` |
+| 36 | Framerate denominator | `1001` |
 | 37 | Audio sample rate | `48000` |
 | 38 | Audio channels | `2` |
 | 39 | Width | `720` |
@@ -87,19 +88,43 @@ The three timestamps occupying indices 22–30 are each written as `19 YYYY-MM-D
 whose content contains one space, so each consumes three tokens. That shape is constant, which is why fixed indices
 work for everything except the path.
 
-## Why this format is worth reading
+### The framerate is a rational, not a number
 
-Two reasons this application prefers the index over invoking `ffprobe`:
+Positions 35 and 36 are a numerator and a denominator, and reading 35 alone is wrong for a large part of a real
+library. An NTSC video stores `30000 1001`; taken as a single field it reads as 30000 fps, and taken as a rounded
+integer it reads as 30 rather than 29.97. Measured across the production library, **1044 of 2523 indexed videos
+(41%) carry a fractional rate**, dominated by `30000/1001` (29.97) and `60000/1001` (59.94).
 
-1. **It is already on disk.** No subprocess per video per processing cycle.
+A denominator of zero or a missing one is rejected rather than defaulted, because a rate is either known exactly or
+not known at all.
+
+## What the index cannot tell you
+
+The index stores a single, **nominal** frame rate. A constant 30 fps video and a variable-rate one — a screen
+recording, or a phone clip that drops frames while still — both record `30 1`. Nothing in the record distinguishes
+them.
+
+That distinction now changes the output: constant sources get a chosen target rate, variable ones are re-encoded at
+their own cadence. Only `ffprobe` can supply it, by comparing the nominal rate (`r_frame_rate`) against the measured
+mean (`avg_frame_rate`). **This is why source videos are probed first and the index is consulted as the fallback**,
+reversing the earlier order.
+
+## Why this format is still worth reading
+
+The index remains the fallback rather than being dropped, for two reasons:
+
+1. **It is already on disk.** No subprocess is needed, and it answers for files `ffprobe` cannot open at all —
+   a permissions problem on the host, or a container that has no read access to the media tree.
 2. **It stores display geometry, with rotation already applied.** A portrait iPhone clip is recorded as
    `1080 1920`. `ffprobe` reports the *coded* geometry — `width=1920 height=1080` — and carries the orientation
    separately as stream side data (`rotation=-90`). Any consumer of `ffprobe` output must apply that swap itself or
    it will treat the video as landscape.
 
-`ffprobe` remains the authority where the index cannot be trusted: when it is missing, unparseable, implausible, or
-when the file is output this application has just written — Synology's index of that file still describes the version
-that was overwritten.
+The probing cost is bounded: metadata is read only for videos not already recorded as `completed` or
+`not_required`, so it is one subprocess per *new* video, not one per video per cycle.
+
+The index is never used to measure a file this application has just written — its record of that file still
+describes the version that was overwritten.
 
 ## The failure mode this parser prevents
 

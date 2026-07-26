@@ -8,7 +8,10 @@ class MetadataIndex(IntEnum):
     AUDIO_BITRATE = 32
     TOTAL_BITRATE = 33
     VIDEO_BITRATE = 34
-    FRAMERATE = 35
+    # The framerate is a rational, not a single number. Reading position 35 alone
+    # returns 30000 for an NTSC video, where the rate is 30000/1001 = 29.97.
+    FRAMERATE_NUMERATOR = 35
+    FRAMERATE_DENOMINATOR = 36
     SAMPLE_RATE = 37
     CHANNELS = 38
     WIDTH = 39

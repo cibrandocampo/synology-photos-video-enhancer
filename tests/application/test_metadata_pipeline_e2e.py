@@ -16,6 +16,7 @@ import pytest
 
 from application.process_videos_use_case import ProcessVideosUseCase
 from domain.constants.audio import AudioCodec
+from domain.constants.framerate import FrameRate
 from domain.constants.resolution import VideoResolution
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.models.app_config import AudioConfig, VideoConfig
@@ -25,6 +26,7 @@ from domain.ports.video_metadata_reader import VideoMetadataReader
 from infrastructure.filesystem.local_filesystem import LocalFilesystem
 from infrastructure.metadata.chained_metadata_reader import ChainedMetadataReader
 from infrastructure.metadata.synoindex_metadata_reader import SynoIndexMetadataReader
+from infrastructure.transcoder.ffmpeg_transcoder import FFmpegTranscoder
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "synoindex"
 
@@ -49,6 +51,12 @@ class _StubLogger:
 
     def subtitle(self, text, char="-"):
         pass
+
+
+class _StubHardwareInfo:
+    """No acceleration, so the software builder is the one exercised."""
+
+    video_acceleration = None
 
 
 class _StubTranscoder:
@@ -103,12 +111,14 @@ class _StubMetadataReader(VideoMetadataReader):
         return self._video
 
 
-def probed(path: str, width: int, height: int, codec: str = "h264") -> Video:
-    """Builds the metadata a probe would report for a produced file."""
+def probed(path: str, width: int, height: int, codec: str = "h264",
+           framerate: float = 30, variable: bool = False) -> Video:
+    """Builds the metadata a probe would report for a file."""
     return Video(
         path=path,
         video_track=VideoTrack(
-            width=width, height=height, codec_name=codec, framerate=30
+            width=width, height=height, codec_name=codec, framerate=framerate,
+            is_variable_framerate=variable,
         ),
         audio_track=AudioTrack(codec="aac", bitrate=128.0, channels=2),
         container=Container(format="mp4"),
@@ -179,17 +189,21 @@ def output_reader():
 
 @pytest.fixture
 def build_use_case(video_config, audio_config, repository, factory, output_reader):
-    """Builds a use case whose metadata path is entirely real."""
+    """Builds a use case whose metadata path is entirely real.
 
-    def _build(root: Path, fallback: Optional[VideoMetadataReader] = None):
+    The chain mirrors `main.py`: the probe first, Synology's index behind it. Passing
+    no `probe` leaves the index alone in the chain, which is the production path for
+    any file ffprobe cannot read.
+    """
+
+    def _build(root: Path, probe: Optional[VideoMetadataReader] = None):
         logger = _StubLogger()
         filesystem = LocalFilesystem(["mp4", "mov", "MOV"])
 
-        readers: List[VideoMetadataReader] = [
-            SynoIndexMetadataReader(filesystem, logger)
-        ]
-        if fallback is not None:
-            readers.append(fallback)
+        readers: List[VideoMetadataReader] = []
+        if probe is not None:
+            readers.append(probe)
+        readers.append(SynoIndexMetadataReader(filesystem, logger))
 
         return ProcessVideosUseCase(
             video_repository=repository,
@@ -227,7 +241,7 @@ class TestTwoSpacePathIncident:
 
     def test_framerate_is_preserved(self, configuration):
         """The shifted bitrate field snapped every one of these to 30 fps."""
-        assert configuration.video_framerate == 25.0
+        assert configuration.video_framerate is FrameRate.FPS_25
 
     def test_audio_is_not_upmixed(self, configuration):
         assert configuration.audio_channels == 1
@@ -252,7 +266,7 @@ class TestOneSpacePathIncident:
         assert configuration.video_height == 720
 
     def test_framerate_is_halved_for_light_output(self, configuration):
-        assert configuration.video_framerate == 25.0
+        assert configuration.video_framerate is FrameRate.FPS_25
 
 
 class TestAccentedPath:
@@ -274,24 +288,24 @@ class TestAccentedPath:
         assert configuration.video_height == 640
 
 
-class TestFallbackToProbe:
-    """With no Synology index the chain must fall through, not give up."""
+class TestChainWithoutAnIndex:
+    """A video Synology never indexed must still be measured, not guessed at."""
 
-    def test_configuration_is_built_from_the_fallback(
+    def test_configuration_is_built_from_the_probe(
         self, tmp_path, build_use_case, factory
     ):
         video = build_media_tree(
             tmp_path, "No Index", "clip.mp4", fixture=None
         )
-        fallback = _StubMetadataReader(probed(str(video), 1080, 1920))
+        probe = _StubMetadataReader(probed(str(video), 1080, 1920))
 
-        use_case = build_use_case(tmp_path, fallback=fallback)
+        use_case = build_use_case(tmp_path, probe=probe)
 
         assert use_case._transcode_video(str(video)) is True
-        assert fallback.requested == [str(video)]
+        assert probe.requested == [str(video)]
         assert factory.transcodings[0].configuration.video_height == 1280
 
-    def test_no_index_and_no_fallback_is_a_failure(
+    def test_no_index_and_no_probe_is_a_failure(
         self, tmp_path, build_use_case, factory, repository
     ):
         """Unknown geometry must stop the transcode rather than guess."""
@@ -359,3 +373,152 @@ class TestNotRequiredWithoutOutputFile:
         use_case._transcode_video(str(video))
 
         assert repository.saved[-1].original_video.video_track.resolution == "1080x1920"
+
+
+class TestFramerateThroughTheStack:
+    """The rate a real record produces, from `SYNOINDEX_MEDIA_INFO` to the command.
+
+    Each layer was tested on its own in T019 to T021, and each of those tests would
+    have passed on code that still shipped 29.97 sources as 30 — because the loss
+    happened between layers, in the int() that the domain model no longer forces.
+    """
+
+    def configuration_for(self, tmp_path, build_use_case, factory, fixture):
+        video = build_media_tree(tmp_path, "Recordings", "clip.mp4", fixture)
+        use_case = build_use_case(tmp_path)
+
+        assert use_case._transcode_video(str(video)) is True
+
+        return factory.transcodings[0].configuration
+
+    def test_ntsc_source_keeps_its_exact_rate(self, tmp_path, build_use_case, factory):
+        """29.97 is the rate; 30 is what a truncation makes of it."""
+        configuration = self.configuration_for(
+            tmp_path, build_use_case, factory, "ntsc_framerate.txt"
+        )
+
+        assert configuration.video_framerate is FrameRate.FPS_29_97
+        assert configuration.video_framerate is not FrameRate.FPS_30
+
+    def test_ntsc_sixty_is_reduced_to_its_ntsc_half(
+        self, tmp_path, build_use_case, factory
+    ):
+        """59.94 halves to 29.97, not to 30 — the fraction survives the reduction."""
+        configuration = self.configuration_for(
+            tmp_path, build_use_case, factory, "ntsc_60_framerate.txt"
+        )
+
+        assert configuration.video_framerate is FrameRate.FPS_29_97
+
+    def test_variable_source_is_passed_through(self, tmp_path, build_use_case, factory):
+        video = build_media_tree(tmp_path, "Recordings", "vfr.mp4", fixture=None)
+        probe = _StubMetadataReader(
+            probed(str(video), 1920, 1080, framerate=30, variable=True)
+        )
+
+        use_case = build_use_case(tmp_path, probe=probe)
+
+        assert use_case._transcode_video(str(video)) is True
+        assert factory.transcodings[0].configuration.video_framerate is None
+
+    def test_a_low_rate_source_is_never_sped_up(
+        self, tmp_path, build_use_case, factory
+    ):
+        """15 fps is below every standard rate, so nothing may be imposed on it."""
+        video = build_media_tree(tmp_path, "Recordings", "slow.mp4", fixture=None)
+        probe = _StubMetadataReader(probed(str(video), 1920, 1080, framerate=15))
+
+        use_case = build_use_case(tmp_path, probe=probe)
+
+        assert use_case._transcode_video(str(video)) is True
+
+        chosen = factory.transcodings[0].configuration.video_framerate
+        assert chosen is None or chosen.to_float() <= 15
+
+
+class TestCommandBuiltFromTheStack:
+    """What FFmpeg is actually asked to do, built from a real captured configuration.
+
+    The configuration assertions above stop one layer short of the thing that matters:
+    a correct `FrameRate` still reaches FFmpeg through a formatter, and that formatter
+    is where the original defect lived.
+    """
+
+    def command_for(self, tmp_path, build_use_case, factory, probe):
+        video = build_media_tree(tmp_path, "Recordings", "clip.mp4", fixture=None)
+        use_case = build_use_case(tmp_path, probe=probe(str(video)))
+
+        assert use_case._transcode_video(str(video)) is True
+
+        transcoding = factory.transcodings[0]
+        hardware = _StubHardwareInfo()
+        transcoder = FFmpegTranscoder(transcoding, hardware, _StubLogger())
+        return transcoder._build_ffmpeg_command()
+
+    def test_variable_source_asks_for_passthrough_and_no_rate(
+        self, tmp_path, build_use_case, factory
+    ):
+        command = self.command_for(
+            tmp_path, build_use_case, factory,
+            lambda path: _StubMetadataReader(
+                probed(path, 1920, 1080, framerate=30, variable=True)
+            ),
+        )
+
+        assert "-r" not in command
+        assert "passthrough" in " ".join(command)
+
+    def test_ntsc_source_asks_for_the_exact_rational(
+        self, tmp_path, build_use_case, factory
+    ):
+        command = self.command_for(
+            tmp_path, build_use_case, factory,
+            lambda path: _StubMetadataReader(
+                probed(path, 1920, 1080, framerate=60000 / 1001)
+            ),
+        )
+        joined = " ".join(command)
+
+        assert "30000/1001" in joined
+        assert "-r 29 " not in joined + " "
+        assert "-r 30 " not in joined + " "
+
+
+class TestReaderChainOrder:
+    """ffprobe leads; the index answers only when the probe cannot.
+
+    This is the test that fails if someone later restores the old order. Nothing else
+    in the suite would: every other case here supplies one reader or the other, so the
+    chain would keep working while quietly losing the ability to detect a variable rate.
+    """
+
+    def test_the_probe_is_consulted_before_the_index(
+        self, tmp_path, build_use_case, factory
+    ):
+        """Both readers can answer; the geometry proves which one was believed."""
+        video = build_media_tree(
+            tmp_path, "Recordings", "clip.mp4", "two_spaces.txt"
+        )
+        probe = _StubMetadataReader(probed(str(video), 640, 480))
+
+        use_case = build_use_case(tmp_path, probe=probe)
+
+        assert use_case._transcode_video(str(video)) is True
+        # The fixture is a 1080x1920 portrait record, which targets height 1280.
+        # 640x480 is landscape and shorter than the target, so it caps at 480.
+        assert factory.transcodings[0].configuration.video_height == 480
+
+    def test_the_index_answers_when_the_probe_cannot(
+        self, tmp_path, build_use_case, factory
+    ):
+        """The index stays in the chain; it is the only source for an unreadable file."""
+        video = build_media_tree(
+            tmp_path, "Recordings", "clip.mp4", "two_spaces.txt"
+        )
+        probe = _StubMetadataReader(None)
+
+        use_case = build_use_case(tmp_path, probe=probe)
+
+        assert use_case._transcode_video(str(video)) is True
+        assert probe.requested == [str(video)]
+        assert factory.transcodings[0].configuration.video_height == 1280

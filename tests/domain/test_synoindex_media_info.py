@@ -40,7 +40,8 @@ def with_declared_length(record: str, length) -> str:
 
 
 def build_record(path: str, width: str = "1920", height: str = "1080",
-                 framerate: str = "30") -> str:
+                 framerate_num: str = "30", framerate_den: str = "1",
+                 token_count: int = 60) -> str:
     """Builds a synthetic record with a chosen path and geometry.
 
     Used only for the plausibility-gate cases, where the point is to control a single
@@ -49,7 +50,9 @@ def build_record(path: str, width: str = "1920", height: str = "1080",
     tokens = ["0"] * 60
     tokens[MetadataIndex.WIDTH] = width
     tokens[MetadataIndex.HEIGHT] = height
-    tokens[MetadataIndex.FRAMERATE] = framerate
+    tokens[MetadataIndex.FRAMERATE_NUMERATOR] = framerate_num
+    tokens[MetadataIndex.FRAMERATE_DENOMINATOR] = framerate_den
+    tokens = tokens[:token_count]
     tail = " ".join(tokens[6:])
     return f"0 0 0 0 {len(path.encode('utf-8'))} {path} {tail}"
 
@@ -121,6 +124,70 @@ class TestAlignment:
         video = SynoIndexMediaInfo.parse("/media/renamed.mp4", load("no_spaces.txt"))
 
         assert video.path == "/media/renamed.mp4"
+
+
+class TestFractionalFramerate:
+    """The framerate spans two positions: a numerator and a denominator.
+
+    Every fixture used to carry a whole rate, so position 36 looked like a constant
+    flag and reading position 35 alone worked by coincidence. In the production
+    library 41% of indexed videos carry a fractional rate.
+    """
+
+    def test_ntsc_rate_is_evaluated_not_truncated(self):
+        video = SynoIndexMediaInfo.parse("/media/clip.MOV", load("ntsc_framerate.txt"))
+
+        assert video is not None
+        assert video.video_track.framerate == pytest.approx(30000 / 1001)
+
+    def test_ntsc_rate_is_not_the_bare_numerator(self):
+        """Reading position 35 alone gave 30000, which the gate then rejected."""
+        video = SynoIndexMediaInfo.parse("/media/clip.MOV", load("ntsc_framerate.txt"))
+
+        assert video.video_track.framerate != 30000
+
+    def test_ntsc_rate_is_not_rounded_to_thirty(self):
+        """29.97 must survive; rounding here is what the enum's fractions prevent."""
+        video = SynoIndexMediaInfo.parse("/media/clip.MOV", load("ntsc_framerate.txt"))
+
+        assert video.video_track.framerate != 30
+
+    def test_ntsc_sixty_rate(self):
+        video = SynoIndexMediaInfo.parse(
+            "/media/clip.mp4", load("ntsc_60_framerate.txt")
+        )
+
+        assert video.video_track.framerate == pytest.approx(60000 / 1001)
+
+    def test_the_rest_of_the_record_still_aligns(self):
+        """Splitting the field must not shift anything after it."""
+        video = SynoIndexMediaInfo.parse("/media/clip.MOV", load("ntsc_framerate.txt"))
+
+        assert video.video_track.resolution == "1920x1080"
+        assert video.audio_track.channels == 2
+        assert video.video_track.codec_name == "hevc"
+
+    @pytest.mark.parametrize(
+        "fixture, expected",
+        [("no_spaces.txt", 30), ("two_spaces.txt", 25), ("one_space.txt", 50)],
+    )
+    def test_whole_rates_are_unchanged(self, fixture, expected):
+        """A denominator of 1 must behave exactly as before."""
+        video = SynoIndexMediaInfo.parse("/media/clip.mp4", load(fixture))
+
+        assert video.video_track.framerate == expected
+
+    def test_zero_denominator_is_rejected(self):
+        """A rate of 30000/0 must not become a plausible-looking 30000 fps."""
+        record = build_record("/media/video.mp4", framerate_num="30000",
+                              framerate_den="0")
+
+        assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
+
+    def test_missing_denominator_is_rejected(self):
+        record = build_record("/media/video.mp4", token_count=36)
+
+        assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
 
 
 class TestFixturesReproduceTheDefect:
@@ -244,11 +311,11 @@ class TestPlausibilityGate:
 
     def test_framerate_from_a_shifted_bitrate(self):
         """6498826 is a bitrate; read as fps it snapped the output to 30."""
-        record = build_record("/media/video.mp4", framerate="6498826")
+        record = build_record("/media/video.mp4", framerate_num="6498826")
         assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
 
     def test_zero_framerate(self):
-        record = build_record("/media/video.mp4", framerate="0")
+        record = build_record("/media/video.mp4", framerate_num="0")
         assert SynoIndexMediaInfo.parse("/media/video.mp4", as_content(record)) is None
 
     def test_dimension_above_the_upper_bound(self):

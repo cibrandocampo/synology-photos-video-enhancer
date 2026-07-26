@@ -12,8 +12,17 @@ class VideoTrack(BaseModel):
     height: int = Field(..., description="Video height in pixels")
     codec_name: str = Field(..., description="Video codec name")
     profile: str = Field(default="", description="Codec profile")
-    framerate: int = Field(..., description="Frames per second")
+    framerate: float = Field(
+        ..., description="Frames per second, exact — an NTSC 29.97 stays 29.97"
+    )
     bitrate: float = Field(default=0.0, description="Video bitrate")
+    is_variable_framerate: bool = Field(
+        default=False,
+        description=(
+            "Source varies its frame rate deliberately, spending frames only where "
+            "there is motion. Its cadence is preserved rather than made constant."
+        ),
+    )
     
     @field_validator('codec_name')
     @classmethod
@@ -134,7 +143,22 @@ class Video(BaseModel):
         width = safe_int(safe_get(MetadataIndex.WIDTH), default=0)
         height = safe_int(safe_get(MetadataIndex.HEIGHT), default=0)
         video_codec = safe_str(safe_get(MetadataIndex.VIDEO_CODEC), default="")
-        framerate = safe_int(safe_get(MetadataIndex.FRAMERATE), default=0)
+
+        # The framerate is stored as a rational across two positions. A zero or
+        # missing denominator yields 0, which the caller's plausibility gate then
+        # rejects — defaulting it to 1 would turn 30000/0 into a plausible-looking
+        # 30000 fps and defeat that gate.
+        framerate_numerator = safe_float(
+            safe_get(MetadataIndex.FRAMERATE_NUMERATOR), default=0.0
+        )
+        framerate_denominator = safe_float(
+            safe_get(MetadataIndex.FRAMERATE_DENOMINATOR), default=0.0
+        )
+        framerate = (
+            framerate_numerator / framerate_denominator
+            if framerate_denominator
+            else 0.0
+        )
         video_bitrate = safe_float(safe_get(MetadataIndex.VIDEO_BITRATE), default=0.0)
         
         # Extract audio metadata fields (use defaults if missing)

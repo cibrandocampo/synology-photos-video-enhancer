@@ -1,4 +1,5 @@
 """Tests for video domain models."""
+import pytest
 from domain.models.video import Video, VideoTrack, AudioTrack, Container
 from domain.constants.synology import MetadataIndex
 
@@ -106,7 +107,8 @@ class TestVideo:
         metadata[MetadataIndex.WIDTH] = "1920"
         metadata[MetadataIndex.HEIGHT] = "1080"
         metadata[MetadataIndex.VIDEO_CODEC] = "h264"
-        metadata[MetadataIndex.FRAMERATE] = "30"
+        metadata[MetadataIndex.FRAMERATE_NUMERATOR] = "30"
+        metadata[MetadataIndex.FRAMERATE_DENOMINATOR] = "1"
         metadata[MetadataIndex.VIDEO_BITRATE] = "5000.0"
         metadata[MetadataIndex.AUDIO_BITRATE] = "128.0"
         metadata[MetadataIndex.AUDIO_CODEC] = "aac"
@@ -165,7 +167,8 @@ class TestVideo:
         metadata = [None] * 60
         metadata[MetadataIndex.WIDTH] = "not_a_number"
         metadata[MetadataIndex.HEIGHT] = "also_bad"
-        metadata[MetadataIndex.FRAMERATE] = "bad"
+        metadata[MetadataIndex.FRAMERATE_NUMERATOR] = "bad"
+        metadata[MetadataIndex.FRAMERATE_DENOMINATOR] = "bad"
 
         video = Video.from_synology_metadata("/test/video.mp4", metadata)
 
@@ -184,3 +187,36 @@ class TestVideo:
 
         assert video.video_track.bitrate == 0.0
         assert video.audio_track.bitrate == 0.0
+
+
+class TestFractionalFramerate:
+    """The measured rate is carried exactly; NTSC sources are not whole numbers."""
+
+    def test_framerate_accepts_a_fractional_value(self):
+        track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=30000 / 1001
+        )
+
+        assert track.framerate == pytest.approx(29.97002997002997)
+
+    def test_framerate_is_not_coerced_to_an_integer(self):
+        track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=29.97
+        )
+
+        assert track.framerate != 30
+        assert track.framerate != 29
+
+    def test_variable_framerate_defaults_to_false(self):
+        """Only ffprobe can determine variability; everything else must not guess."""
+        track = VideoTrack(width=1920, height=1080, codec_name="h264", framerate=30)
+
+        assert track.is_variable_framerate is False
+
+    def test_variable_framerate_can_be_set(self):
+        track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=30,
+            is_variable_framerate=True,
+        )
+
+        assert track.is_variable_framerate is True

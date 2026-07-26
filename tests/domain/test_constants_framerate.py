@@ -12,28 +12,41 @@ class TestFrameRate:
         assert abs(FrameRate.FPS_29_97.to_float() - 29.97) < 0.01
         assert abs(FrameRate.FPS_23_976.to_float() - 23.976) < 0.01
     
-    def test_from_int_exact_match(self):
-        """Test from_int with exact matches."""
-        assert FrameRate.from_int(30) == FrameRate.FPS_30
-        assert FrameRate.from_int(24) == FrameRate.FPS_24
-        assert FrameRate.from_int(60) == FrameRate.FPS_60
+    def test_from_rate_exact_match(self):
+        """Test from_rate with exact matches."""
+        assert FrameRate.from_rate(30) == FrameRate.FPS_30
+        assert FrameRate.from_rate(24) == FrameRate.FPS_24
+        assert FrameRate.from_rate(60) == FrameRate.FPS_60
     
-    def test_from_int_closest_match(self):
-        """Test from_int finds closest match."""
-        assert FrameRate.from_int(29) == FrameRate.FPS_29_97  # Closer to 29.97 than 30
-        assert FrameRate.from_int(25) == FrameRate.FPS_25
-        assert FrameRate.from_int(50) == FrameRate.FPS_50
+    def test_from_rate_closest_match(self):
+        """Test from_rate finds closest match."""
+        assert FrameRate.from_rate(29) == FrameRate.FPS_29_97  # Closer to 29.97 than 30
+        assert FrameRate.from_rate(25) == FrameRate.FPS_25
+        assert FrameRate.from_rate(50) == FrameRate.FPS_50
     
-    def test_from_int_zero_or_negative(self):
-        """Test from_int with zero or negative returns default."""
-        assert FrameRate.from_int(0) == FrameRate.FPS_30
-        assert FrameRate.from_int(-1) == FrameRate.FPS_30
+    def test_from_rate_exact_ntsc_rates(self):
+        """The reason the members are Fractions: an exact 29.97 must resolve to
+        FPS_29_97 rather than being rounded to 30 on the way in."""
+        assert FrameRate.from_rate(30000 / 1001) == FrameRate.FPS_29_97
+        assert FrameRate.from_rate(60000 / 1001) == FrameRate.FPS_59_94
+        assert FrameRate.from_rate(24000 / 1001) == FrameRate.FPS_23_976
+
+    def test_from_rate_variable_source_artefacts(self):
+        """Rates measured from variable-rate footage snap to the nearest standard."""
+        assert FrameRate.from_rate(29.92) == FrameRate.FPS_29_97
+        assert FrameRate.from_rate(29.67) == FrameRate.FPS_29_97
+        assert FrameRate.from_rate(30.00003) == FrameRate.FPS_30
+
+    def test_from_rate_zero_or_negative(self):
+        """Test from_rate with zero or negative returns default."""
+        assert FrameRate.from_rate(0) == FrameRate.FPS_30
+        assert FrameRate.from_rate(-1) == FrameRate.FPS_30
     
-    def test_from_int_high_framerate(self):
-        """Test from_int with high framerates."""
-        assert FrameRate.from_int(120) == FrameRate.FPS_120
-        assert FrameRate.from_int(144) == FrameRate.FPS_144
-        assert FrameRate.from_int(240) == FrameRate.FPS_240
+    def test_from_rate_high_framerate(self):
+        """Test from_rate with high framerates."""
+        assert FrameRate.from_rate(120) == FrameRate.FPS_120
+        assert FrameRate.from_rate(144) == FrameRate.FPS_144
+        assert FrameRate.from_rate(240) == FrameRate.FPS_240
     
     def test_get_framerate_for_light_videos_fps_50(self):
         """Test get_framerate_for_light_videos converts FPS_50 to FPS_25."""

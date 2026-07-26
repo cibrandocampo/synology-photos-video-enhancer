@@ -10,6 +10,7 @@ from domain.models.app_config import VideoConfig, AudioConfig
 from domain.constants.video import VideoCodec, VideoProfile
 from domain.constants.resolution import VideoResolution
 from domain.constants.audio import AudioCodec
+from domain.constants.framerate import FrameRate
 from domain.ports.video_metadata_reader import VideoMetadataReader
 from application.process_videos_use_case import ProcessVideosUseCase
 from application.process_result import ProcessResult
@@ -216,15 +217,19 @@ class TestProcessVideosUseCase:
 
     def test_calculate_output_framerate(self, use_case):
         """Test calculating output framerate."""
-        framerate = use_case._calculate_output_framerate(60)
+        track = VideoTrack(width=1920, height=1080, codec_name="h264", framerate=60)
+        framerate = use_case._calculate_output_framerate(track)
         # Should convert 60fps to 30fps for light videos
-        assert framerate == 30.0
+        assert framerate is FrameRate.FPS_30
 
     def test_calculate_output_framerate_ntsc(self, use_case):
-        """Test calculating output framerate for NTSC rates."""
-        framerate = use_case._calculate_output_framerate(29)
-        # Should find closest match (29.97) and convert if needed
-        assert isinstance(framerate, float)
+        """An exact NTSC rate keeps its own standard member."""
+        track = VideoTrack(
+            width=1920, height=1080, codec_name="h264", framerate=30000 / 1001
+        )
+        framerate = use_case._calculate_output_framerate(track)
+
+        assert framerate is FrameRate.FPS_29_97
 
     def test_is_transcoding_valid_completed_status(self, use_case, sample_video):
         """Test _is_transcoding_valid with completed status."""
@@ -772,7 +777,78 @@ class TestProductionIncidentRegression:
 
     def test_framerate_is_preserved(self, configuration):
         """The shifted bitrate field snapped every one of these to 30 fps."""
-        assert configuration.video_framerate == 25.0
+        assert configuration.video_framerate is FrameRate.FPS_25
 
     def test_audio_is_not_upmixed(self, configuration):
         assert configuration.audio_channels == 1
+
+
+class TestFramerateDecision:
+    """Constant sources get a chosen rate; variable ones keep their own cadence."""
+
+    def decide(self, use_case, rate, variable=False):
+        track = VideoTrack(
+            width=1920, height=1080, codec_name="h264",
+            framerate=rate, is_variable_framerate=variable,
+        )
+        return use_case._calculate_output_framerate(track)
+
+    def test_variable_source_is_passed_through(self, use_case):
+        """The camera spent frames where there was motion; that is worth keeping."""
+        assert self.decide(use_case, 30.0, variable=True) is None
+
+    def test_variable_source_is_passed_through_even_at_a_high_rate(self, use_case):
+        """Reduction does not override the source's own decision to vary."""
+        assert self.decide(use_case, 60.0, variable=True) is None
+
+    def test_unknown_rate_is_passed_through(self, use_case):
+        """Imposing a cadence we never measured is the guess this series removed."""
+        assert self.decide(use_case, 0) is None
+
+    @pytest.mark.parametrize(
+        "rate, expected",
+        [
+            (30000 / 1001, FrameRate.FPS_29_97),
+            (25.0, FrameRate.FPS_25),
+            (30.0, FrameRate.FPS_30),
+            (24.0, FrameRate.FPS_24),
+        ],
+    )
+    def test_constant_source_at_or_below_thirty_keeps_its_rate(
+        self, use_case, rate, expected
+    ):
+        assert self.decide(use_case, rate) is expected
+
+    @pytest.mark.parametrize(
+        "rate, expected",
+        [
+            (50.0, FrameRate.FPS_25),
+            (60000 / 1001, FrameRate.FPS_29_97),
+            (60.0, FrameRate.FPS_30),
+            (120.0, FrameRate.FPS_30),
+            (240.0, FrameRate.FPS_30),
+        ],
+    )
+    def test_high_rates_are_reduced(self, use_case, rate, expected):
+        assert self.decide(use_case, rate) is expected
+
+    def test_one_hundred_and_forty_four_uses_the_map_not_halving(self, use_case):
+        """Halving would give 18, a rate the enum does not contain."""
+        assert self.decide(use_case, 144.0) is FrameRate.FPS_24
+
+    @pytest.mark.parametrize("rate", [23.0, 15.0, 12.0, 8.0])
+    def test_slow_sources_are_never_sped_up(self, use_case, rate):
+        """Below every standard rate, so the source's own cadence is the answer."""
+        assert self.decide(use_case, rate) is None
+
+    def test_a_rate_just_below_a_standard_one_is_passed_through(self, use_case):
+        """29 must not gain frames at 29.97 nor lose them at 25."""
+        assert self.decide(use_case, 29.0) is None
+
+    def test_no_decision_ever_exceeds_the_source(self, use_case):
+        """The property the guard exists for, stated directly."""
+        for rate in (8.0, 12.0, 23.0, 24.0, 25.0, 29.0, 30000 / 1001, 30.0,
+                     50.0, 60.0, 120.0, 144.0, 240.0):
+            chosen = self.decide(use_case, rate)
+            if chosen is not None:
+                assert chosen.to_float() <= rate, f"{chosen} exceeds source {rate}"
