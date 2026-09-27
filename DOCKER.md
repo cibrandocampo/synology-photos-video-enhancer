@@ -62,7 +62,7 @@ The Dockerfile uses a multi-stage approach:
 
 2. **Stage 2 (runtime)**: Final image that combines:
    - Python runtime (from base image)
-   - Jellyfin FFmpeg 7 (pre-built package with hardware acceleration drivers included)
+   - Jellyfin FFmpeg 8 (pre-built package with hardware acceleration drivers included)
    - Python dependencies (from wheels)
    - Application code
 
@@ -106,7 +106,7 @@ Build times are significantly faster since we use pre-built FFmpeg packages inst
 - Ensure buildx is enabled and QEMU is installed
 - Verify with: `docker buildx ls`
 
-### Error: "jellyfin-ffmpeg7 not found"
+### Error: "jellyfin-ffmpeg8 not found"
 - Ensure the Jellyfin repository is properly configured
 - Check that the architecture (amd64/arm64) is supported
 - Verify network connectivity to repo.jellyfin.org

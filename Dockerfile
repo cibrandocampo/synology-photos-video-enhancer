@@ -28,7 +28,7 @@ RUN install -d -m 0755 /etc/apt/keyrings \
 
 RUN apt-get update && \
     case "$TARGETARCH" in \
-      amd64|arm64) apt-get install -y --no-install-recommends jellyfin-ffmpeg7 ;; \
+      amd64|arm64) apt-get install -y --no-install-recommends jellyfin-ffmpeg8 ;; \
       *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
     esac \
   && rm -rf /var/lib/apt/lists/*
